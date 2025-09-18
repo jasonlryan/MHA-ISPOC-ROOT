@@ -33,6 +33,13 @@
   - Script exits non-zero on unrecoverable errors and emits summary counts.
 - **Dependencies**: AUT-1.
 - **Linked Deliverables**: #1, #4
+- **Status**: Approved ✅
+- **Verification Notes**:
+  - `scripts/vector_store_upsert.py` present and executable
+  - Vector store ID resolution prioritizes test store: `--vector-store-id` → `TEST_VECTOR_STORE_ID` → `VITE_TEST_VECTOR_STORE_ID` → `VECTOR_STORE_ID` → `VITE_OPENAI_VECTOR_STORE_ID` → `VITE_VECTOR_STORE_ID`
+  - Emits `vector.config` log with selected `vectorStoreId` and `source` (arg/test-env/prod-env)
+  - API key resolution: `VITE_OPENAI_API_KEY` → `OPENAI_API_KEY`
+  - Uses canonical content hashing from AUT-1 and updates `state/vector_state.json` only after successful upload
 
 ## AUT-3: Vector Store Reconciliation Script
 - **Goal**: Build `scripts/reconcile_vector_store.py` to remove vector entries absent from `MHA_Documents_Metadata_Index.json`.
