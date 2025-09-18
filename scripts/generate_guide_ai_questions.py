@@ -34,11 +34,16 @@ def backup_existing_index():
     return False
 
 def load_openai_key():
-    """Load OpenAI API key from .env file"""
-    dotenv.load_dotenv(ENV_FILE)
+    """Load OpenAI API key from .env files, preferring repo root, with fallbacks."""
+    loaded = dotenv.load_dotenv(".env")
+    if not loaded:
+        if os.path.exists(ENV_FILE):
+            loaded = dotenv.load_dotenv(ENV_FILE)
+        if not loaded:
+            dotenv.load_dotenv(dotenv.find_dotenv())
     api_key = os.getenv("VITE_OPENAI_API_KEY")
     if not api_key:
-        raise ValueError("No OpenAI API key found in .env file")
+        raise ValueError("No OpenAI API key found. Checked .env, iSPOC/.env, and discovered .env files.")
     return api_key
 
 def load_guide_index():
