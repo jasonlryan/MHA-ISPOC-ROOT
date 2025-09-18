@@ -74,15 +74,35 @@ class VectorStoreClient:
         self._client = OpenAI(api_key=api_key)
         self.vector_store_id = vector_store_id
 
-    def upload(self, path: Path, *, external_id: str, metadata: Dict[str, Any]) -> str:
-        """Upload ``path`` to the vector store and return the file id."""
+    def upload(self, path: Path, *, external_id: str) -> str:
+        """Upload ``path`` to the vector store and return the vector store file id.
+
+        SDK does not support passing metadata on upload; we store external_id in local state.
+        """
         with path.open("rb") as handle:
-            result = self._client.beta.vector_stores.files.upload_and_poll(  # type: ignore[attr-defined]
-                vector_store_id=self.vector_store_id,
+            created_file = self._client.files.create(
                 file=handle,
-                metadata={"external_id": external_id, **metadata},
+                purpose="assistants",
             )
-        return getattr(result, "id", result["id"])  # support both attr and dict access
+        # Extract created file id safely
+        created_file_id = getattr(created_file, "id", None)
+        if created_file_id is None:
+            try:
+                created_file_id = created_file.get("id")  # type: ignore[attr-defined]
+            except Exception:
+                raise RuntimeError("Could not extract id from created file response")
+        # Attach to vector store
+        attached = self._client.beta.vector_stores.files.create(  # type: ignore[attr-defined]
+            vector_store_id=self.vector_store_id,
+            file_id=created_file_id,
+        )
+        attached_id = getattr(attached, "id", None)
+        if attached_id is None:
+            try:
+                attached_id = attached.get("id")  # type: ignore[attr-defined]
+            except Exception:
+                raise RuntimeError("Could not extract id from attach response")
+        return attached_id
 
     def delete(self, file_id: str) -> None:
         """Delete ``file_id`` from the vector store."""
@@ -90,6 +110,25 @@ class VectorStoreClient:
             vector_store_id=self.vector_store_id,
             file_id=file_id,
         )
+
+    def iter_files(self, *, limit: int = 100) -> Iterable[Any]:  # pragma: no cover - simple wrapper
+        after: Optional[str] = None
+        while True:
+            result = self._client.beta.vector_stores.files.list(  # type: ignore[attr-defined]
+                vector_store_id=self.vector_store_id,
+                limit=limit,
+                after=after,
+            )
+            data = getattr(result, "data", result["data"])
+            for item in data:
+                yield item
+
+            has_more = bool(getattr(result, "has_more", getattr(result, "hasMore", False)))
+            if not has_more:
+                break
+            after = getattr(result, "last_id", getattr(result, "lastId", None))
+            if after is None:
+                break
 
 
 def backoff_sleep(attempt: int, *, base_delay: float) -> None:
@@ -188,6 +227,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-retries", type=int, default=3)
     parser.add_argument("--retry-base-delay", type=float, default=1.5)
     parser.add_argument("--log-level", default="INFO")
+    parser.add_argument("--limit", type=int, default=0, help="Limit number of uploads (create+update) for debugging")
     return parser.parse_args()
 
 
@@ -261,28 +301,19 @@ def main() -> int:
     state_dirty = False
     failures: List[Dict[str, Any]] = []
 
-    def perform_upload(item: DocumentWorkItem) -> str:
-        metadata = {
-            "documentType": item.document_type,
-            "title": item.title,
-            "file": item.external_id,
-            "contentHash": item.content_hash,
-        }
-        if item.identity:
-            metadata["identifier"] = item.identity
-        if item.extracted_date:
-            metadata["extractedDate"] = item.extracted_date
-        metadata["description"] = item.index_record.get("Description")
-        metadata["questions"] = item.index_record.get("Questions Answered")
+    processed = 0
+    limit = max(0, args.limit)
 
+    def perform_upload(item: DocumentWorkItem) -> str:
         return client.upload(
             item.source_path,
             external_id=item.external_id,
-            metadata=metadata,
         )
 
     for action_name in ("create", "update"):
         for item in actions[action_name]:
+            if limit and processed >= limit:
+                break
             context = {
                 "externalId": item.external_id,
                 "documentType": item.document_type,
@@ -316,9 +347,12 @@ def main() -> int:
                     title=item.title,
                 )
                 state_dirty = True
+                processed += 1
             except Exception as exc:  # pragma: no cover - network errors
                 failures.append({"externalId": item.external_id, "error": str(exc)})
                 log_event("vector.error", externalId=item.external_id, error=str(exc))
+        if limit and processed >= limit:
+            break
 
     if state_dirty:
         state.save()

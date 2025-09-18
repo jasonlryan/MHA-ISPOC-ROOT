@@ -53,6 +53,12 @@
   - Script logs per-item actions and totals; non-zero exit on failure.
 - **Dependencies**: AUT-1, AUT-2 (state layout, client utilities).
 - **Linked Deliverables**: #2, #4
+- **Status**: Approved ✅
+- **Verification Notes**:
+  - Dry-run and real reconcile against test store completed successfully
+  - Counts matched: `vectorFiles=109`, `allowedExternalIds=109`, `staleByState=0`
+  - Plan indicated `toDelete=0` and completed without errors
+  - Unknown files reported due to SDK metadata limitations; not deleted unless `--include-unknown` is used
 
 ## AUT-4: JSON Schema Definitions and Validation
 - **Goal**: Define JSON Schema files for policy, guide, index, and combined index outputs and enforce validation as part of the pipeline.

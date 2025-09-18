@@ -120,24 +120,60 @@ def list_vector_store_files(client: Any, vector_store_id: str) -> List[Dict[str,
             after=cursor,
             limit=100,
         )
-        # Support attr and dict access
-        data = getattr(result, "data", None) or result.get("data", [])
+        # Extract list of file objects from result
+        data = getattr(result, "data", None)
+        if data is None and hasattr(result, "__iter__"):
+            try:
+                data = list(result)  # type: ignore
+            except Exception:
+                data = []
+        if data is None:
+            try:
+                data = result["data"]  # type: ignore[index]
+            except Exception:
+                data = []
+
         for file_obj in data:
-            file_id = getattr(file_obj, "id", None) or file_obj.get("id")
-            metadata = getattr(file_obj, "metadata", None) or file_obj.get("metadata", {})
+            # Extract id
+            if hasattr(file_obj, "id"):
+                file_id = getattr(file_obj, "id")
+            else:
+                try:
+                    file_id = file_obj["id"]  # type: ignore[index]
+                except Exception:
+                    file_id = None
+            # Extract metadata
+            if hasattr(file_obj, "metadata"):
+                metadata = getattr(file_obj, "metadata")
+            else:
+                try:
+                    metadata = file_obj.get("metadata", {})  # type: ignore[attr-defined]
+                except Exception:
+                    metadata = {}
             external_id = None
             if isinstance(metadata, dict):
                 external_id = metadata.get("external_id")
-            files.append({"id": file_id, "external_id": external_id, "raw": file_obj})
-        # Pagination
-        has_more = getattr(result, "has_more", None)
-        if has_more is None:
-            has_more = result.get("has_more", False)
+            files.append({"id": file_id, "external_id": external_id})
+
+        # Pagination flags
+        if hasattr(result, "has_more"):
+            has_more = getattr(result, "has_more")
+        else:
+            try:
+                has_more = result["has_more"]  # type: ignore[index]
+            except Exception:
+                has_more = False
         if not has_more:
             break
-        # Determine next cursor if available
-        cursor = getattr(result, "last_id", None) or result.get("last_id")
-        if not cursor:  # no cursor available
+        # Next cursor / last_id
+        if hasattr(result, "last_id"):
+            cursor = getattr(result, "last_id")
+        else:
+            try:
+                cursor = result["last_id"]  # type: ignore[index]
+            except Exception:
+                cursor = None
+        if not cursor:
             break
     return files
 
@@ -166,22 +202,45 @@ def main() -> int:
     index_docs = load_combined_index(args.combined_index)
     allowed_external_ids = {doc.get("File") for doc in index_docs if doc.get("File")}
 
-    # List vector store files
-    files = list_vector_store_files(client, vector_store_id)
-    log_event("reconcile.list", counts={"vectorFiles": len(files), "allowedExternalIds": len(allowed_external_ids)})
-
-    # Determine deletions
+    # Determine deletions from local state first (authoritative)
+    stale_external_ids = [eid for eid in state.docs.keys() if eid not in allowed_external_ids]
     to_delete: List[Dict[str, Any]] = []
+    for eid in stale_external_ids:
+        entry = state.get(eid) or {}
+        file_id = entry.get("fileId")
+        if file_id:
+            to_delete.append({"id": file_id, "external_id": eid, "source": "state"})
+
+    # Optionally list vector store files to find unknowns not tracked in state
+    unknowns: List[Dict[str, Any]] = []
+    files = list_vector_store_files(client, vector_store_id)
     for f in files:
         eid = f.get("external_id")
-        if eid is None and not args.include_unknown:
+        if not eid:
+            # Untracked/unknown file (no external_id metadata); only delete if explicitly requested
+            unknowns.append({"id": f.get("id"), "external_id": None, "source": "unknown"})
             continue
-        if (eid is None) or (eid not in allowed_external_ids):
-            to_delete.append(f)
+        if eid not in allowed_external_ids and eid not in state.docs:
+            # Not tracked in state, not present in allowed set – consider as unknown stale
+            unknowns.append({"id": f.get("id"), "external_id": eid, "source": "unknown"})
+
+    log_event(
+        "reconcile.list",
+        counts={
+            "vectorFiles": len(files),
+            "allowedExternalIds": len(allowed_external_ids),
+            "staleByState": len(stale_external_ids),
+            "unknownFiles": len(unknowns),
+        },
+    )
+
+    # Merge unknowns into deletion plan only if requested
+    if args.include_unknown:
+        to_delete.extend(unknowns)
 
     log_event("reconcile.plan", toDelete=len(to_delete))
     for f in to_delete[:50]:  # cap listing
-        log_event("reconcile.item", externalId=f.get("external_id"), fileId=f.get("id"))
+        log_event("reconcile.item", externalId=f.get("external_id"), fileId=f.get("id"), source=f.get("source"))
 
     if args.dry_run:
         log_event("reconcile.complete", dryRun=True)
