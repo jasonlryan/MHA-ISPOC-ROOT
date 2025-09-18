@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MHA Document Pipeline Overview</title>
+<style>
+  :root {
+    --bg: #0b1020;
+    --panel: #121936;
+    --text: #e9eefc;
+    --muted: #a9b3d9;
+    --accent: #7aa2ff;
+    --accent-2: #61d4a8;
+    --accent-3: #f5a97f;
+    --border: #243056;
+    --arrow: #7aa2ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    background: radial-gradient(1200px 800px at 70% -20%, #1a2246 0%, var(--bg) 60%);
+    color: var(--text);
+  }
+  .container {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px 60px;
+  }
+  .title {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    margin: 8px 0 4px;
+  }
+  .subtitle {
+    color: var(--muted);
+    margin: 0 0 28px;
+    font-size: 15px;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 8px 0 24px;
+  }
+  .legend .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: #0e1430;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .dot.acc { background: var(--accent); }
+  .dot.acc2 { background: var(--accent-2); }
+  .dot.acc3 { background: var(--accent-3); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  .col-span-2 { grid-column: span 2; }
+  .col-span-3 { grid-column: span 3; }
+  .col-span-4 { grid-column: span 4; }
+  .col-span-6 { grid-column: span 6; }
+
+  .card {
+    background: linear-gradient(180deg, #121a3a 0%, #0e1531 100%);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    position: relative;
+    box-shadow: 0 6px 20px rgba(5, 12, 35, 0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+  .card h3 { margin: 0 0 8px; font-size: 16px; letter-spacing: 0.2px; }
+  .card p { margin: 6px 0; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+  .mono { font-family: SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12.5px; color: #d8def6; }
+  .small { font-size: 12.5px; color: var(--muted); }
+
+  .arrow {
+    position: relative;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 6px 0 2px;
+  }
+  .arrow::after {
+    content: "";
+    display: block;
+    margin: 8px auto 0;
+    width: 36px;
+    height: 12px;
+    background: linear-gradient(90deg, transparent 0, var(--arrow) 40%, var(--arrow) 60%, transparent 100%);
+    -webkit-mask: radial-gradient(circle at 34px 6px, transparent 7px, black 7px) left / 24px 100% repeat-x;
+            mask: radial-gradient(circle at 34px 6px, transparent 7px, black 7px) left / 24px 100% repeat-x;
+    opacity: 0.9;
+  }
+
+  .section-title {
+    margin: 34px 0 8px;
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+  }
+
+  .kbd {
+    display: inline-block;
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    background: #0b122e;
+    font-size: 12px;
+    color: var(--text);
+  }
+  code.inline { background: #0b122e; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--border); color: #bdd1ff; }
+
+  .note { border-left: 3px solid var(--accent); padding: 8px 12px; margin: 8px 0; background: rgba(122, 162, 255, 0.07); border-radius: 8px; }
+
+  @media (max-width: 980px) {
+    .grid { grid-template-columns: 1fr; }
+    .col-span-2, .col-span-3, .col-span-4, .col-span-6 { grid-column: span 1; }
+  }
+
+  .tabs { display: flex; gap: 8px; margin: 12px 0 20px; }
+  .tab-btn {
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: #0e1430;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .tab-btn.active { color: var(--text); border-color: var(--accent); box-shadow: 0 0 0 2px rgba(122,162,255,0.15) inset; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div>
+      <div class="kbd">MHA</div>
+      <div class="title">Document Processing Pipeline</div>
+      <p class="subtitle">Visual overview of how DOCX sources become JSON, metadata indexes, AI-enriched questions, and the combined master index.</p>
+      <div class="legend">
+        <span class="pill"><span class="dot acc"></span> Conversion</span>
+        <span class="pill"><span class="dot acc2"></span> Indexing</span>
+        <span class="pill"><span class="dot acc3"></span> AI Questions</span>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="power">Power Automate</button>
+    </div>
+
+    <div id="tab-overview" class="tab-panel active">
+      <div class="grid">
+      <div class="card col-span-3">
+        <h3>Inputs: DOCX Sources</h3>
+        <p class="mono">/Users/jasonryan/Documents/MHA/raw policies</p>
+        <p class="mono">/Users/jasonryan/Documents/MHA/raw_guides</p>
+        <p class="small">Source Word documents for Policies and Guides.</p>
+      </div>
+      <div class="arrow col-span-6">Convert</div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc"></span> DOCX → JSON (Policies)</h3>
+        <p>Script: <code class="inline">scripts/convert_to_json.py</code></p>
+        <p>Output: <code class="inline">/Users/jasonryan/Documents/MHA/VECTOR_JSON</code></p>
+        <p class="small">Parses policy metadata, sections, and full text into structured JSON.</p>
+      </div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc"></span> DOCX → JSON (Guides)</h3>
+        <p>Script: <code class="inline">scripts/convert_guides_to_json.py</code></p>
+        <p>Output: <code class="inline">/Users/jasonryan/Documents/MHA/VECTOR_GUIDES_JSON</code></p>
+        <p class="small">Extracts guide content into JSON (overview, steps, etc.).</p>
+      </div>
+
+      <div class="arrow col-span-6">Build Indexes</div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc2"></span> Build Policy Index</h3>
+        <p>Script: <code class="inline">scripts/build_policy_index.py</code></p>
+        <p>Reads: <code class="inline">VECTOR_JSON/*.json</code></p>
+        <p>Writes: <code class="inline">/Users/jasonryan/Documents/MHA/Policy_Documents_Metadata_Index.json</code></p>
+        <p class="small">Initial 3 questions come from type-based templates, then can be AI-updated.</p>
+      </div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc2"></span> Build Guide Index</h3>
+        <p>Script: <code class="inline">scripts/build_guide_index.py</code></p>
+        <p>Reads: <code class="inline">VECTOR_GUIDES_JSON/*.json</code></p>
+        <p>Writes: <code class="inline">/Users/jasonryan/Documents/MHA/Guide_Documents_Metadata_Index.json</code></p>
+        <p class="small">Initial 3 questions come from guide-type templates, then can be AI-updated.</p>
+      </div>
+
+      <div class="arrow col-span-6">Enhance with AI</div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc3"></span> AI Questions (Policies)</h3>
+        <p>Script: <code class="inline">scripts/generate_ai_questions.py</code></p>
+        <p>Updates: <code class="inline">Policy_Documents_Metadata_Index.json</code></p>
+        <p class="small">OpenAI call (<code class="inline">gpt-4.1-mini</code>) updates <code class="inline">Questions Answered</code> with 3 practical questions.</p>
+        <div class="note small">
+          System prompt: Identify 3 most important staff-focused questions; return JSON array only.
+        </div>
+      </div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc3"></span> AI Questions (Guides)</h3>
+        <p>Script: <code class="inline">scripts/generate_guide_ai_questions.py</code></p>
+        <p>Updates: <code class="inline">Guide_Documents_Metadata_Index.json</code></p>
+        <p class="small">OpenAI call (<code class="inline">gpt-4.1-mini</code>) updates <code class="inline">Questions Answered</code> with 3 user-focused questions.</p>
+        <div class="note small">
+          System prompt: Identify 3 practical user questions; return JSON array only.
+        </div>
+      </div>
+
+      <div class="arrow col-span-6">Combine</div>
+      <div class="card col-span-6">
+        <h3>Combined Master Index</h3>
+        <p>Script: <code class="inline">scripts/combine_indexes.py</code></p>
+        <p>Reads: <code class="inline">Guide_Documents_Metadata_Index.json</code>, <code class="inline">Policy_Documents_Metadata_Index.json</code></p>
+        <p>Writes: <code class="inline">/Users/jasonryan/Documents/MHA/MHA_Documents_Metadata_Index.json</code></p>
+        <p class="small">Normalizes file extensions to <code class="inline">.json</code> and sets <code class="inline">Document Type</code>.</p>
+      </div>
+    </div>
+
+    <div class="section-title">Commands</div>
+    <div class="card">
+      <p class="mono">pip install -r /Users/jasonryan/Documents/MHA/scripts/requirements.txt</p>
+      <p class="mono">python /Users/jasonryan/Documents/MHA/scripts/convert_to_json.py</p>
+      <p class="mono">python /Users/jasonryan/Documents/MHA/scripts/convert_guides_to_json.py</p>
+      <p class="mono">python /Users/jasonryan/Documents/MHA/scripts/build_policy_index.py</p>
+      <p class="mono">python /Users/jasonryan/Documents/MHA/scripts/build_guide_index.py</p>
+      <p class="mono">python /Users/jasonryan/Documents/MHA/scripts/generate_ai_questions.py</p>
+      <p class="mono">python /Users/jasonryan/Documents/MHA/scripts/generate_guide_ai_questions.py</p>
+      <p class="mono">python /Users/jasonryan/Documents/MHA/scripts/combine_indexes.py</p>
+      <p class="small">API key: <code class="inline">iSPOC/.env</code> → <code class="inline">VITE_OPENAI_API_KEY</code></p>
+    </div>
+    </div> <!-- end grid + commands -->
+  </div> <!-- end tab-overview -->
+
+  <div id="tab-power" class="tab-panel">
+    <div class="section-title">Power Automate: Automation Brief</div>
+    <div class="card">
+      <p class="small">Goal: Orchestrate DOCX → JSON → Index → AI → Combined Index, then update an OpenAI vector store when sources change or on schedule.</p>
+      <h3>Trigger Options</h3>
+      <p class="small">Choose one or more:</p>
+      <ul>
+        <li class="small">When a file is created/modified in <code class="inline">raw policies</code> or <code class="inline">raw_guides</code> (SharePoint/OneDrive connector)</li>
+        <li class="small">Scheduled (e.g., daily 02:00)</li>
+        <li class="small">Manual button (instant cloud flow)</li>
+      </ul>
+
+      <h3>High-level Steps</h3>
+      <ol>
+        <li class="small">Initialize variables: <code class="inline">BASE_DIR=/Users/jasonryan/Documents/MHA</code>, <code class="inline">ENV=iSPOC/.env</code></li>
+        <li class="small">Run Python conversion (Policies): <code class="inline">python scripts/convert_to_json.py</code></li>
+        <li class="small">Run Python conversion (Guides): <code class="inline">python scripts/convert_guides_to_json.py</code></li>
+        <li class="small">Build Policy index: <code class="inline">python scripts/build_policy_index.py</code></li>
+        <li class="small">Build Guide index: <code class="inline">python scripts/build_guide_index.py</code></li>
+        <li class="small">Generate AI questions (Policies): <code class="inline">python scripts/generate_ai_questions.py</code></li>
+        <li class="small">Generate AI questions (Guides): <code class="inline">python scripts/generate_guide_ai_questions.py</code></li>
+        <li class="small">Combine indexes: <code class="inline">python scripts/combine_indexes.py</code></li>
+        <li class="small">Update OpenAI vector store (see options below)</li>
+      </ol>
+
+      <h3>How to Run Scripts from Power Automate</h3>
+      <ul>
+        <li class="small">Preferred: Azure Automation Runbook (Python 3) or Azure Container Apps Job executes commands in repo</li>
+        <li class="small">Alternative: Self-hosted runner via on-premises data gateway executing a shell script</li>
+      </ul>
+      <p class="mono">cd /Users/jasonryan/Documents/MHA && \
+python -m pip install -r scripts/requirements.txt && \
+python scripts/convert_to_json.py && \
+python scripts/convert_guides_to_json.py && \
+python scripts/build_policy_index.py && \
+python scripts/build_guide_index.py && \
+python scripts/generate_ai_questions.py && \
+python scripts/generate_guide_ai_questions.py && \
+python scripts/combine_indexes.py</p>
+
+      <h3>Vector Store Update Options</h3>
+      <ul>
+        <li class="small"><b>Option A (HTTP webhook):</b> Call a secure internal endpoint that ingests <code class="inline">MHA_Documents_Metadata_Index.json</code> and upserts to OpenAI Vector Store.</li>
+        <li class="small"><b>Option B (Runbook step):</b> Add a final script that uses OpenAI SDK to upsert documents.</li>
+      </ul>
+      <p class="small">Example pseudo-steps:</p>
+      <pre class="mono" style="white-space: pre-wrap;">
+# env: VITE_OPENAI_API_KEY from iSPOC/.env
+# 1) Create or get vector store
+# 2) For each document referenced in MHA_Documents_Metadata_Index.json, upsert content + metadata
+# 3) Commit and verify counts
+      </pre>
+
+      <h3>Secrets & Config</h3>
+      <ul>
+        <li class="small"><code class="inline">VITE_OPENAI_API_KEY</code> (from <code class="inline">iSPOC/.env</code>) as a secret in Power Automate/Azure Automation</li>
+        <li class="small">Working directory: <code class="inline">/Users/jasonryan/Documents/MHA</code></li>
+        <li class="small">Ensure Python and dependencies are available (see <code class="inline">scripts/requirements.txt</code>)</li>
+      </ul>
+
+      <h3>Idempotency & Safety</h3>
+      <ul>
+        <li class="small">Indexes are auto-backed-up with timestamps by builder scripts</li>
+        <li class="small">Gate AI steps: only run if JSON changed since last run (optional check)</li>
+        <li class="small">Log each stage output; surface failures in flow run history</li>
+      </ul>
+
+      <h3>Outputs</h3>
+      <ul>
+        <li class="small"><code class="inline">VECTOR_JSON</code>, <code class="inline">VECTOR_GUIDES_JSON</code></li>
+        <li class="small"><code class="inline">Policy_Documents_Metadata_Index.json</code>, <code class="inline">Guide_Documents_Metadata_Index.json</code>, <code class="inline">MHA_Documents_Metadata_Index.json</code></li>
+        <li class="small">OpenAI Vector Store: upserted/updated documents with metadata</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll('.tab-btn');
+    const panels = {
+      overview: document.getElementById('tab-overview'),
+      power: document.getElementById('tab-power')
+    };
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.getAttribute('data-tab');
+        Object.keys(panels).forEach(k => panels[k].classList.toggle('active', k === tab));
+      });
+    });
+  </script>
+</body>
+</html>

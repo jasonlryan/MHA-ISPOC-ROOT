@@ -2,10 +2,6 @@
 iSPOC/
 
 # Generated JSON data and raw sources
-VECTOR_JSON/
-VECTOR_GUIDES_JSON/
-raw policies/
-raw_guides/
 
 # Archive folder
 archive/

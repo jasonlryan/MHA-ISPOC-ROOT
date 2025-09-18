@@ -1,0 +1,11 @@
+{
+  "guide_number": "16",
+  "title": "How to add and remove parameters from an interaction (3)",
+  "filename": "16. How to add and remove parameters from an interaction (3).docx",
+  "extracted_date": "2025-04-30",
+  "metadata": {},
+  "full_text": "16. How to add or remove parameters from an interaction \nSelect the resident you wish to personalise the interaction for.\nSelect care plan from the menu headers.\nScroll to the bottom of the page and select Personalised Interactions. \nSelect the interaction from the list, either by scrolling through the list or by typing it out in the search bar. Click the toggle and then click the pencil edit icon.\nScroll down and click advanced configuration. \nSelect the parameters option from the list. \nUntick the parameters you do not want to see in the interaction when it is completed. Alternatively tick the parameters you want to add into the interaction. \nScroll down and click Save ",
+  "sections": {
+    "steps": "Select the resident you wish to personalise the interaction for. Select care plan from the menu headers. Scroll to the bottom of the page and select Personalised Interactions. Select the interaction from the list, either by scrolling through the list or by typing it out in the search bar. Click the toggle and then click the pencil edit icon. Scroll down and click advanced configuration. Select the parameters option from the list. Untick the parameters you do not want to see in the interaction when it is completed. Alternatively tick the parameters you want to add into the interaction. Scroll down and click Save"
+  }
+}
