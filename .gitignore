@@ -1,0 +1,26 @@
+# Nested project tracked separately
+iSPOC/
+
+# Generated JSON data and raw sources
+VECTOR_JSON/
+VECTOR_GUIDES_JSON/
+raw policies/
+raw_guides/
+
+# Archive folder
+archive/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+.env
+
+# macOS
+.DS_Store
+
+# Logs/temporary
+*.log
+*.tmp
