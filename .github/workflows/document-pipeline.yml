@@ -48,8 +48,10 @@ jobs:
       - name: Run pipeline (dry-run, AI skipped)
         env:
           TEST_VECTOR_STORE_ID: ${{ secrets.TEST_VECTOR_STORE_ID }}
+          GITHUB_WORKSPACE: ${{ github.workspace }}
         run: |
-          PYTHONPATH=. python run_pipeline.py --dry-run --skip-ai --log-level INFO
+          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/scripts"
+          python run_pipeline.py --dry-run --skip-ai --log-level INFO
 
       - name: Upload state artifacts
         if: always()
