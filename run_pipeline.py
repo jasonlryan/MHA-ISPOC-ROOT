@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import logging
 import os
@@ -19,14 +20,30 @@ from typing import Dict, Iterable, List, Optional
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, os.fspath(ROOT))
 
+# Import helpers with multiple fallbacks to survive CI path quirks
 try:
     from scripts.utils.state import ensure_state_file  # type: ignore
     from scripts.vector_store_upsert import load_env  # type: ignore
 except ModuleNotFoundError:
-    # Fallback: add scripts/ directly and import relative modules
-    sys.path.insert(0, os.fspath(ROOT / "scripts"))
-    from utils.state import ensure_state_file  # type: ignore
-    from vector_store_upsert import load_env  # type: ignore
+    try:
+        sys.path.insert(0, os.fspath(ROOT / "scripts"))
+        from utils.state import ensure_state_file  # type: ignore
+        from vector_store_upsert import load_env  # type: ignore
+    except ModuleNotFoundError:
+        # Final fallback: import by file path
+        state_path = ROOT / "scripts" / "utils" / "state.py"
+        upsert_path = ROOT / "scripts" / "vector_store_upsert.py"
+        def _import_from_path(name: str, path: Path):
+            spec = importlib.util.spec_from_file_location(name, os.fspath(path))
+            if spec is None or spec.loader is None:
+                raise ModuleNotFoundError(f"Cannot load module {name} from {path}")
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)  # type: ignore[attr-defined]
+            return module
+        state_mod = _import_from_path("state_local", state_path)
+        upsert_mod = _import_from_path("upsert_local", upsert_path)
+        ensure_state_file = getattr(state_mod, "ensure_state_file")  # type: ignore
+        load_env = getattr(upsert_mod, "load_env")  # type: ignore
 
 STATE_DIR = ROOT / "state"
 DEFAULT_STATE_FILE = STATE_DIR / "vector_state.json"
