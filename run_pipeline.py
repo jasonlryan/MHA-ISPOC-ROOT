@@ -15,6 +15,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
+# Ensure local packages are importable on CI
+sys.path.insert(0, os.fspath(Path(__file__).resolve().parent))
+
 from scripts.utils.state import ensure_state_file
 from scripts.vector_store_upsert import load_env
 
