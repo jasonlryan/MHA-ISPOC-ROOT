@@ -4,6 +4,7 @@ Script to convert DOCX guide files to structured JSON format
 """
 
 import os
+import sys
 import json
 import re
 import docx
@@ -139,6 +140,12 @@ def main():
     print(f"Starting conversion of guide DOCX files to JSON format...")
     print(f"Input directory: {INPUT_DIR}")
     print(f"Output directory: {OUTPUT_DIR}")
+    
+    # If guides directory does not exist, skip gracefully
+    if not os.path.isdir(INPUT_DIR):
+        print("No guides directory found; skipping guide conversion.")
+        print(f"\nConversion complete. Processed 0 of 0 files.")
+        return
     
     # Get list of all docx files
     docx_files = []

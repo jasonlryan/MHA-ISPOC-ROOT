@@ -129,6 +129,12 @@
   - Documentation explains required secrets and how to trigger manually.
 - **Dependencies**: AUT-6 (orchestrator), AUT-2/3 for scripts.
 - **Linked Deliverables**: #7
+ - **Status**: Approved ✅
+ - **Verification Notes**:
+   - Workflow runs on `automate` branch only; secrets `OPENAI_API_KEY` and `TEST_VECTOR_STORE_ID` configured
+   - Unit tests pass on CI after adding schemas and requirements
+   - Pipeline dry-run executed successfully for policies; guides step now skips gracefully when `raw_guides/` is absent
+   - Artifacts (`state/` and indexes) upload enabled for inspection
 
 ## AUT-8: Documentation and Runbook Updates
 - **Goal**: Document pipeline usage, dry-run, rollback, troubleshooting, and CI/automation steps.
