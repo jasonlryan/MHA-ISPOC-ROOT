@@ -1,0 +1,63 @@
+name: Document Pipeline
+
+on:
+  push:
+    branches: [ automate ]
+  schedule:
+    - cron: '0 3 * * *' # 03:00 UTC nightly (guarded to run only if ref==automate)
+  workflow_dispatch: {}
+
+jobs:
+  run-pipeline:
+    if: github.ref == 'refs/heads/automate'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: automate
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r scripts/requirements.txt
+
+      - name: Prepare env
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TEST_VECTOR_STORE_ID: ${{ secrets.TEST_VECTOR_STORE_ID }}
+        run: |
+          if [ -z "$OPENAI_API_KEY" ] || [ -z "$TEST_VECTOR_STORE_ID" ]; then
+            echo "Missing OPENAI_API_KEY or TEST_VECTOR_STORE_ID secrets" >&2
+            exit 1
+          fi
+          echo "VITE_OPENAI_API_KEY=$OPENAI_API_KEY" >> $GITHUB_ENV
+          echo "TEST_VECTOR_STORE_ID=$TEST_VECTOR_STORE_ID" >> $GITHUB_ENV
+
+      - name: Run unit tests
+        run: |
+          PYTHONPATH=. python -m unittest discover scripts/tests
+
+      - name: Run pipeline (dry-run, AI skipped)
+        env:
+          TEST_VECTOR_STORE_ID: ${{ secrets.TEST_VECTOR_STORE_ID }}
+        run: |
+          PYTHONPATH=. python run_pipeline.py --dry-run --skip-ai --log-level INFO
+
+      - name: Upload state artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-state
+          path: |
+            state/
+            Policy_Documents_Metadata_Index.json
+            Guide_Documents_Metadata_Index.json
+            MHA_Documents_Metadata_Index.json
