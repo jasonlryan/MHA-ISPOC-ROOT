@@ -18,6 +18,8 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import NamedTuple
 
 try:
     from dotenv import load_dotenv
@@ -120,6 +122,56 @@ def http_client(api_key: str) -> httpx.Client:
     )
 
 
+# Exported for tests
+@dataclass
+class VectorFileRecord:
+    file_id: str
+    external_id: Optional[str]
+    metadata: Dict[str, Any]
+    reason: Optional[str] = None
+    remove_state: bool = False
+
+class ReconcilePlan(NamedTuple):
+    deletions: List[VectorFileRecord]
+    state_only_removals: List[str]
+
+# Test helper: accept a dummy client that yields dict items
+def list_vector_files(client_like: Any) -> List[VectorFileRecord]:
+    records: List[VectorFileRecord] = []
+    # Expect an iterator over dicts with id/metadata
+    iterator = getattr(client_like, "iter_files", None)
+    if callable(iterator):
+        for item in iterator():
+            fid = item.get("id")
+            meta = item.get("metadata") or {}
+            eid = meta.get("external_id") if isinstance(meta, dict) else None
+            records.append(VectorFileRecord(file_id=fid, external_id=eid, metadata=meta))
+    return records
+
+# Test helper: compute reconciliation plan from records + combined index
+def plan_reconciliation(records: List[VectorFileRecord], allowed_files: List[str], state: VectorState) -> ReconcilePlan:
+    deletions: List[VectorFileRecord] = []
+    state_only_removals: List[str] = []
+
+    # Track duplicates by external_id
+    seen: Dict[str, str] = {}
+    for rec in records:
+        if not rec.external_id:
+            continue
+        if rec.external_id in seen:
+            # duplicate file for same external_id → delete the newer one
+            deletions.append(VectorFileRecord(file_id=rec.file_id, external_id=rec.external_id, metadata={}, reason="duplicate_external_id", remove_state=False))
+        else:
+            seen[rec.external_id] = rec.file_id
+
+    # Orphans: in state but not allowed anymore
+    for eid, entry in state.docs.items():
+        if eid not in allowed_files:
+            deletions.append(VectorFileRecord(file_id=entry.get("fileId", ""), external_id=eid, metadata={}, reason="not_in_combined_index", remove_state=True))
+
+    return ReconcilePlan(deletions=deletions, state_only_removals=state_only_removals)
+
+
 def list_vector_store_files_httpx(client: httpx.Client, vector_store_id: str) -> List[Dict[str, Any]]:
     files: List[Dict[str, Any]] = []
     after: Optional[str] = None
@@ -133,7 +185,6 @@ def list_vector_store_files_httpx(client: httpx.Client, vector_store_id: str) ->
         data = payload.get("data", [])
         for item in data:
             file_id = item.get("id")
-            # external_id may not be present; treat as unknown unless provided
             metadata = item.get("metadata") or {}
             external_id = metadata.get("external_id") if isinstance(metadata, dict) else None
             files.append({"id": file_id, "external_id": external_id})

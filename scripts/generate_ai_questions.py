@@ -1,227 +1,379 @@
 #!/usr/bin/env python3
-"""
-Script to enhance Policy_Documents_Metadata_Index.json with AI-generated questions
-using OpenAI to analyze policy content and create relevant questions
-"""
+"""Enhance policy metadata with AI-generated questions using change detection."""
 
-import os
+from __future__ import annotations
+
+import argparse
 import json
-import time
-import re
-import dotenv
-from openai import OpenAI
-from datetime import datetime
+import os
 import shutil
+import time
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-# Paths
-ENV_FILE = "iSPOC/.env"
-INPUT_DIR = "VECTOR_JSON"
-INDEX_FILE = "Policy_Documents_Metadata_Index.json"
+try:  # pragma: no cover - optional dependency handling
+    import dotenv
+except ImportError:  # pragma: no cover
+    dotenv = None  # type: ignore
 
-def backup_existing_index():
-    """Create a backup of the existing index file"""
-    if os.path.exists(INDEX_FILE):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_filename = f"{os.path.splitext(INDEX_FILE)[0]}_{timestamp}.json"
-        
-        try:
-            shutil.copy2(INDEX_FILE, backup_filename)
-            print(f"Created backup of existing index at: {backup_filename}")
-            return True
-        except Exception as e:
-            print(f"Warning: Could not create backup: {e}")
-            return False
-    return False
+try:  # pragma: no cover - optional dependency handling
+    from openai import OpenAI
+except ImportError:  # pragma: no cover
+    OpenAI = None  # type: ignore
 
-def load_openai_key():
-    """Load OpenAI API key from .env files, preferring repo root, with fallbacks."""
-    loaded = dotenv.load_dotenv(".env")
-    if not loaded:
-        # Fallback to iSPOC/.env if present
-        if os.path.exists(ENV_FILE):
-            loaded = dotenv.load_dotenv(ENV_FILE)
-        # As a last resort, try auto-discovery
-        if not loaded:
-            dotenv.load_dotenv(dotenv.find_dotenv())
-    api_key = os.getenv("VITE_OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError("No OpenAI API key found. Checked .env, iSPOC/.env, and discovered .env files.")
-    return api_key
+from scripts.utils.state import (
+    VectorState,
+    compute_content_hash_from_data,
+    ensure_state_file,
+)
 
-def load_policy_index():
-    """Load the existing policy index"""
+ROOT = Path(__file__).resolve().parents[1]
+INDEX_PATH = ROOT / "Policy_Documents_Metadata_Index.json"
+JSON_DIR = ROOT / "VECTOR_JSON"
+STATE_PATH = ROOT / "state/vector_state.json"
+PRIMARY_ENV = ROOT / ".env"
+FALLBACK_ENV = ROOT / "iSPOC" / ".env"
+MODEL_NAME = "gpt-4.1-mini"
+DEFAULT_SAVE_INTERVAL = 5
+
+
+@dataclass
+class PlanItem:
+    entry: Dict[str, Any]
+    json_filename: str
+    json_path: Path
+    payload: Optional[Dict[str, Any]]
+    content_hash: Optional[str]
+    action: str  # "update" | "skip"
+    reason: Optional[str] = None
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--state-file", type=Path, default=STATE_PATH)
+    parser.add_argument("--dry-run", action="store_true", help="Show planned updates without calling OpenAI or writing files")
+    parser.add_argument("--force", action="store_true", help="Regenerate questions even when content hash unchanged")
+    parser.add_argument("--only", nargs="+", help="Limit regeneration to matching document titles or filenames")
+    parser.add_argument("--sleep", type=float, default=1.0, help="Delay between OpenAI calls (seconds)")
+    parser.add_argument("--save-interval", type=int, default=DEFAULT_SAVE_INTERVAL, help="Write index to disk every N updates (default 5)")
+    return parser.parse_args()
+
+
+def current_timestamp() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def backup_index(index_path: Path) -> Optional[Path]:
+    if not index_path.exists():
+        return None
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    backup_path = index_path.with_name(f"{index_path.stem}_{timestamp}.json")
     try:
-        with open(INDEX_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Error loading index file: {e}")
-        return {"Policy Documents": []}
-
-def get_policy_json(filename):
-    """Load a policy JSON file"""
-    json_path = os.path.join(INPUT_DIR, filename)
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Error loading policy file {filename}: {e}")
+        shutil.copy2(index_path, backup_path)
+        print(f"Created backup at {backup_path}")
+        return backup_path
+    except Exception as exc:  # pragma: no cover - filesystem errors
+        print(f"Warning: unable to create backup: {exc}")
         return None
 
-def prepare_content_for_ai(policy_json):
-    """Extract and format the most relevant content from the policy JSON"""
-    content = []
-    
-    # Add title and ID
+
+def load_openai_key() -> str:
+    loaded = False
+    if dotenv:
+        if PRIMARY_ENV.exists():
+            loaded = dotenv.load_dotenv(PRIMARY_ENV, override=False)
+        if not loaded and FALLBACK_ENV.exists():
+            loaded = dotenv.load_dotenv(FALLBACK_ENV, override=False)
+        if not loaded:
+            try:
+                discovered = dotenv.find_dotenv()  # type: ignore[attr-defined]
+            except AttributeError:
+                discovered = ""
+            if discovered:
+                dotenv.load_dotenv(discovered, override=False)
+    api_key = os.getenv("VITE_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("OpenAI API key not found. Set VITE_OPENAI_API_KEY or OPENAI_API_KEY.")
+    return api_key
+
+
+def load_policy_index(index_path: Path) -> Dict[str, Any]:
+    if not index_path.exists():
+        raise FileNotFoundError(f"Policy index not found: {index_path}")
+    with index_path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def save_policy_index(index_data: Dict[str, Any], index_path: Path) -> None:
+    with index_path.open("w", encoding="utf-8") as handle:
+        json.dump(index_data, handle, indent=4, ensure_ascii=False)
+
+
+def prepare_content_for_ai(policy_json: Dict[str, Any]) -> str:
+    content: List[str] = []
     title = policy_json.get("title", "")
     policy_id = policy_json.get("id", "")
     content.append(f"Policy: {title} (ID: {policy_id})")
-    
-    # Add sections in a structured way
-    sections = policy_json.get("sections", {})
+
+    sections = policy_json.get("sections", {}) or {}
     for section_name, section_text in sections.items():
         if section_text:
-            content.append(f"{section_name.upper()}: {section_text[:1000]}")  # Limit each section
-    
-    # If we don't have enough content from sections, add some of the full text
+            text = str(section_text)
+            content.append(f"{section_name.upper()}: {text[:1000]}")
+
     if len(content) < 3 and policy_json.get("full_text"):
         content.append(f"CONTENT EXCERPT: {policy_json['full_text'][:2000]}")
-    
     return "\n\n".join(content)
 
-def generate_questions_with_openai(client, policy_content):
-    """Generate questions using OpenAI API"""
+
+def generate_questions_with_openai(client: Any, policy_content: str) -> List[str]:
     try:
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",  # Using a more reliable model
+        response = client.chat.completions.create(  # type: ignore[attr-defined]
+            model=MODEL_NAME,
             messages=[
-                {"role": "system", "content": "You are an expert in healthcare policy analysis. Your task is to identify the 3 most important questions that this policy answers. Focus on specific, practical questions that staff would need to know. Return ONLY a JSON array of 3 questions, nothing else."},
-                {"role": "user", "content": policy_content}
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert in healthcare policy analysis. Identify the"
+                        " 3 most important practical questions this policy answers."
+                        " Return ONLY a JSON array of 3 questions."
+                    ),
+                },
+                {"role": "user", "content": policy_content},
             ],
             response_format={"type": "json_object"},
             temperature=0.5,
-            max_tokens=500
+            max_tokens=500,
         )
-        
-        result = response.choices[0].message.content
-        # Parse the JSON response to extract the questions
+        result = response.choices[0].message.content  # type: ignore[index]
+        if not result:
+            raise ValueError("Empty response from OpenAI")
         try:
-            questions_data = json.loads(result)
-            if "questions" in questions_data:
-                return questions_data["questions"]
-            else:
-                # Sometimes the model returns an array directly
-                if isinstance(questions_data, list):
-                    return questions_data
-                # Or it might use a different key
-                for key in questions_data:
-                    if isinstance(questions_data[key], list) and len(questions_data[key]) > 0:
-                        return questions_data[key][:3]  # Ensure we only take 3 questions
-                return ["What procedures are outlined in this policy?", 
-                        "What are the key responsibilities defined in this policy?", 
-                        "How is compliance with this policy monitored?"]
+            payload = json.loads(result)
         except json.JSONDecodeError:
-            print(f"Failed to parse JSON response: {result}")
-            return ["What procedures are outlined in this policy?", 
-                    "What are the key responsibilities defined in this policy?", 
-                    "How is compliance with this policy monitored?"]
-            
-    except Exception as e:
-        print(f"Error calling OpenAI API: {e}")
-        return ["What procedures are outlined in this policy?", 
-                "What are the key responsibilities defined in this policy?", 
-                "How is compliance with this policy monitored?"]
+            raise ValueError(f"Failed to parse JSON response: {result}")
+        if isinstance(payload, list):
+            return [str(item) for item in payload][:3]
+        if isinstance(payload, dict):
+            if "questions" in payload and isinstance(payload["questions"], list):
+                return [str(item) for item in payload["questions"]][:3]
+            for value in payload.values():
+                if isinstance(value, list) and value:
+                    return [str(item) for item in value][:3]
+        raise ValueError(f"Unexpected response format: {payload}")
+    except Exception as exc:
+        print(f"Error calling OpenAI API: {exc}")
+        return [
+            "What procedures are outlined in this policy?",
+            "What responsibilities are assigned in this policy?",
+            "How is compliance with this policy monitored?",
+        ]
 
-def update_policy_index(index_data, client):
-    """Update policy index with AI-generated questions"""
-    updated_count = 0
-    total_count = len(index_data["Policy Documents"])
-    
-    for i, policy in enumerate(index_data["Policy Documents"]):
-        policy_title = policy.get("Document", "Unknown")
-        
-        # Display countdown and policy title
-        print("\n" + "="*80)
-        print(f"Processing [{i+1}/{total_count}]: {policy_title}")
-        print("="*80)
-        
-        # Extract JSON filename from the txt filename
-        txt_filename = policy.get("File", "")
-        if not txt_filename or not txt_filename.endswith(".txt"):
-            print(f"SKIPPING: Invalid filename {txt_filename}")
-            continue
-            
-        json_filename = txt_filename.replace(".txt", ".json")
-        
-        # Load the policy JSON
-        policy_json = get_policy_json(json_filename)
-        if not policy_json:
-            print(f"SKIPPING: Could not load JSON for {json_filename}")
-            continue
-        
-        # Prepare content for AI
-        policy_content = prepare_content_for_ai(policy_json)
-        
-        # Generate questions
-        print(f"Generating questions with OpenAI...")
-        questions = generate_questions_with_openai(client, policy_content)
-        
-        # Display the generated questions
-        print("\nGenerated questions:")
-        for j, question in enumerate(questions):
-            print(f"  {j+1}. {question}")
-        
-        # Update the policy entry
-        policy["Questions Answered"] = questions
-        updated_count += 1
-        
-        # Save after each update to prevent data loss if interrupted
-        if updated_count % 5 == 0:
-            save_index(index_data)
-            print(f"\nSaved progress after processing {updated_count} policies")
-        
-        # Sleep to avoid rate limiting
-        time.sleep(1)
-    
-    print(f"\nUpdated {updated_count} of {total_count} policies with AI-generated questions")
-    return index_data
 
-def save_index(index_data):
-    """Save the updated index back to file"""
-    try:
-        with open(INDEX_FILE, 'w', encoding='utf-8') as f:
-            json.dump(index_data, f, indent=4, ensure_ascii=False)
+def _matches_filters(json_filename: str, file_field: str, document: str, filters: Optional[Sequence[str]]) -> bool:
+    if not filters:
         return True
-    except Exception as e:
-        print(f"Error saving index file: {e}")
-        return False
+    lowered = {item.lower() for item in filters}
+    return (
+        json_filename.lower() in lowered
+        or file_field.lower() in lowered
+        or document.lower() in lowered
+    )
 
-def main():
-    print("Enhancing policy index with AI-generated questions...")
-    
-    # Backup existing index
-    backup_existing_index()
-    
-    # Load OpenAI API key
-    try:
-        api_key = load_openai_key()
-        client = OpenAI(api_key=api_key)
-    except Exception as e:
-        print(f"Failed to initialize OpenAI client: {e}")
-        return
-    
-    # Load policy index
-    index_data = load_policy_index()
-    if not index_data.get("Policy Documents"):
-        print("No policies found in index file")
-        return
-    
-    # Update policy index with AI-generated questions
-    updated_index = update_policy_index(index_data, client)
-    
-    # Save updated index
-    save_index(updated_index)
-    
-    print("Done! All policies updated with AI-generated questions.")
+
+def _load_json(path: Path) -> Dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def collect_plan(
+    documents: Iterable[Dict[str, Any]],
+    state: VectorState,
+    *,
+    force: bool,
+    filters: Optional[Sequence[str]] = None,
+) -> List[PlanItem]:
+    plan: List[PlanItem] = []
+    for entry in documents:
+        file_field = entry.get("File", "")
+        document_name = entry.get("Document", "Unknown")
+        if not file_field:
+            plan.append(
+                PlanItem(
+                    entry=entry,
+                    json_filename="",
+                    json_path=Path(),
+                    payload=None,
+                    content_hash=None,
+                    action="skip",
+                    reason="missing_file",
+                )
+            )
+            continue
+
+        json_filename = file_field.replace(".txt", ".json") if file_field.endswith(".txt") else file_field
+        json_path = JSON_DIR / json_filename
+
+        if not _matches_filters(json_filename, file_field, document_name, filters):
+            continue
+
+        if not json_path.exists():
+            plan.append(
+                PlanItem(
+                    entry=entry,
+                    json_filename=json_filename,
+                    json_path=json_path,
+                    payload=None,
+                    content_hash=None,
+                    action="skip",
+                    reason="json_not_found",
+                )
+            )
+            continue
+
+        try:
+            payload = _load_json(json_path)
+        except Exception as exc:
+            plan.append(
+                PlanItem(
+                    entry=entry,
+                    json_filename=json_filename,
+                    json_path=json_path,
+                    payload=None,
+                    content_hash=None,
+                    action="skip",
+                    reason=f"load_error: {exc}",
+                )
+            )
+            continue
+
+        content_hash = compute_content_hash_from_data(payload)
+        state_entry = state.get(json_filename) or {}
+        previous_hash = (
+            state_entry.get("policyQuestionsHash")
+            or state_entry.get("questionsHash")
+        )
+
+        if not force and previous_hash == content_hash:
+            plan.append(
+                PlanItem(
+                    entry=entry,
+                    json_filename=json_filename,
+                    json_path=json_path,
+                    payload=payload,
+                    content_hash=content_hash,
+                    action="skip",
+                    reason="unchanged",
+                )
+            )
+            continue
+
+        plan.append(
+            PlanItem(
+                entry=entry,
+                json_filename=json_filename,
+                json_path=json_path,
+                payload=payload,
+                content_hash=content_hash,
+                action="update",
+                reason=None,
+            )
+        )
+    return plan
+
+
+def main() -> int:
+    args = parse_args()
+
+    ensure_state_file(args.state_file)
+    state = VectorState(args.state_file)
+
+    index_data = load_policy_index(INDEX_PATH)
+    documents = index_data.get("Policy Documents", [])
+    if not documents:
+        print("No policies found in index file.")
+        return 0
+
+    plan = collect_plan(documents, state, force=args.force, filters=args.only)
+    updates = [item for item in plan if item.action == "update"]
+    skips = [item for item in plan if item.action == "skip"]
+
+    total_considered = len(plan)
+    print(f"Policies considered: {total_considered}; to update: {len(updates)}; skipped: {len(skips)}")
+
+    if not updates:
+        if not plan and args.only:
+            print("No policies matched the provided filters.")
+        else:
+            for item in skips:
+                doc_title = item.entry.get("Document", item.json_filename or "Unknown")
+                reason = item.reason or "skip"
+                print(f"Skipping {doc_title} ({item.json_filename}): {reason}")
+            print("All policy questions are up to date.")
+        return 0
+
+    if args.dry_run:
+        for item in updates:
+            doc_title = item.entry.get("Document", item.json_filename)
+            print(f"[DRY-RUN] Would regenerate questions for {doc_title} ({item.json_filename})")
+        return 0
+
+    if OpenAI is None:
+        raise RuntimeError("openai package is not installed. Run `pip install -r scripts/requirements.txt`.")
+
+    api_key = load_openai_key()
+    client = OpenAI(api_key=api_key)  # type: ignore[call-arg]
+
+    backup_index(INDEX_PATH)
+
+    updated_count = 0
+    state_dirty = False
+
+    for idx, item in enumerate(plan, start=1):
+        doc_title = item.entry.get("Document", item.json_filename or "Unknown")
+        print("\n" + "=" * 80)
+        print(f"Processing [{idx}/{len(plan)}]: {doc_title}")
+        print("=" * 80)
+
+        if item.action != "update":
+            reason = item.reason or "skip"
+            print(f"Skipping: {reason}")
+            continue
+
+        payload = item.payload or {}
+        policy_content = prepare_content_for_ai(payload)
+        questions = generate_questions_with_openai(client, policy_content)
+
+        item.entry["Questions Answered"] = questions
+        timestamp = current_timestamp()
+        state.set_metadata(
+            item.json_filename,
+            policyQuestionsHash=item.content_hash,
+            policyQuestionsUpdatedAt=timestamp,
+        )
+        state_dirty = True
+        updated_count += 1
+
+        print("Generated questions:")
+        for i, question in enumerate(questions, start=1):
+            print(f"  {i}. {question}")
+
+        if args.save_interval > 0 and updated_count % args.save_interval == 0:
+            save_policy_index(index_data, INDEX_PATH)
+            print(f"Saved progress after {updated_count} updates")
+
+        if args.sleep > 0 and idx < len(plan):
+            time.sleep(args.sleep)
+
+    save_policy_index(index_data, INDEX_PATH)
+    if state_dirty:
+        state.save()
+
+    print(f"\nUpdated questions for {updated_count} policies.")
+    return 0
+
 
 if __name__ == "__main__":
-    main() 
+    raise SystemExit(main())
