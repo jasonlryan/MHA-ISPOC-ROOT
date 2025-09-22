@@ -112,6 +112,11 @@
   - Concurrent invocation attempts block/abort with informative message.
 - **Dependencies**: AUT-1 through AUT-5.
 - **Linked Deliverables**: #3, #4, #5
+- **Status**: Approved ✅
+- **Verification Notes**:
+  - End-to-end run against test store succeeded (AI skipped): convert → index → validate → combine → upsert (0 create/0 update/109 skip) → reconcile
+  - Reconcile implemented via HTTP (httpx) calls to OpenAI API to avoid SDK interface drift; no deletions required (`vectorFiles=109`, `allowedExternalIds=109`)
+  - Locking, flags, retries, and structured logs verified; pipeline exits success on clean run and aborts on step failure with summary
 
 ## AUT-7: Automation Workflow (GitHub Actions)
 - **Goal**: Provide `.github/workflows/document-pipeline.yml` to run the orchestrator on schedule and on-demand.

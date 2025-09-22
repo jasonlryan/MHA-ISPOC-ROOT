@@ -25,16 +25,14 @@ except ImportError:  # pragma: no cover
     def load_dotenv(*_args: Any, **_kwargs: Any) -> bool:  # type: ignore
         return False
 
-try:
-    from openai import OpenAI
-except ImportError:  # pragma: no cover
-    OpenAI = None  # type: ignore
+import httpx
 
 from scripts.utils.state import VectorState, ensure_state_file
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMBINED_INDEX = ROOT / "MHA_Documents_Metadata_Index.json"
 DEFAULT_STATE_PATH = ROOT / "state/vector_state.json"
+OPENAI_BASE_URL = "https://api.openai.com/v1"
 
 
 def log_event(event: str, **payload: Any) -> None:
@@ -111,71 +109,45 @@ def resolve_vector_store_id(args: argparse.Namespace) -> Tuple[str, str]:
     return vector_store_id, source
 
 
-def list_vector_store_files(client: Any, vector_store_id: str) -> List[Dict[str, Any]]:
+def http_client(api_key: str) -> httpx.Client:
+    return httpx.Client(
+        base_url=OPENAI_BASE_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        timeout=30.0,
+    )
+
+
+def list_vector_store_files_httpx(client: httpx.Client, vector_store_id: str) -> List[Dict[str, Any]]:
     files: List[Dict[str, Any]] = []
-    cursor: Optional[str] = None
+    after: Optional[str] = None
     while True:
-        result = client.beta.vector_stores.files.list(  # type: ignore[attr-defined]
-            vector_store_id=vector_store_id,
-            after=cursor,
-            limit=100,
-        )
-        # Extract list of file objects from result
-        data = getattr(result, "data", None)
-        if data is None and hasattr(result, "__iter__"):
-            try:
-                data = list(result)  # type: ignore
-            except Exception:
-                data = []
-        if data is None:
-            try:
-                data = result["data"]  # type: ignore[index]
-            except Exception:
-                data = []
-
-        for file_obj in data:
-            # Extract id
-            if hasattr(file_obj, "id"):
-                file_id = getattr(file_obj, "id")
-            else:
-                try:
-                    file_id = file_obj["id"]  # type: ignore[index]
-                except Exception:
-                    file_id = None
-            # Extract metadata
-            if hasattr(file_obj, "metadata"):
-                metadata = getattr(file_obj, "metadata")
-            else:
-                try:
-                    metadata = file_obj.get("metadata", {})  # type: ignore[attr-defined]
-                except Exception:
-                    metadata = {}
-            external_id = None
-            if isinstance(metadata, dict):
-                external_id = metadata.get("external_id")
+        params = {"limit": 100}
+        if after:
+            params["after"] = after
+        resp = client.get(f"/vector_stores/{vector_store_id}/files", params=params)
+        resp.raise_for_status()
+        payload = resp.json()
+        data = payload.get("data", [])
+        for item in data:
+            file_id = item.get("id")
+            # external_id may not be present; treat as unknown unless provided
+            metadata = item.get("metadata") or {}
+            external_id = metadata.get("external_id") if isinstance(metadata, dict) else None
             files.append({"id": file_id, "external_id": external_id})
-
-        # Pagination flags
-        if hasattr(result, "has_more"):
-            has_more = getattr(result, "has_more")
-        else:
-            try:
-                has_more = result["has_more"]  # type: ignore[index]
-            except Exception:
-                has_more = False
-        if not has_more:
+        if not payload.get("has_more"):
             break
-        # Next cursor / last_id
-        if hasattr(result, "last_id"):
-            cursor = getattr(result, "last_id")
-        else:
-            try:
-                cursor = result["last_id"]  # type: ignore[index]
-            except Exception:
-                cursor = None
-        if not cursor:
+        after = payload.get("last_id")
+        if not after:
             break
     return files
+
+
+def delete_vector_store_file_httpx(client: httpx.Client, vector_store_id: str, file_id: str) -> None:
+    resp = client.delete(f"/vector_stores/{vector_store_id}/files/{file_id}")
+    resp.raise_for_status()
 
 
 def main() -> int:
@@ -189,16 +161,12 @@ def main() -> int:
     vector_store_id, source = resolve_vector_store_id(args)
     log_event("reconcile.config", vectorStoreId=vector_store_id, source=source)
 
-    # API key
     api_key = os.getenv("VITE_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
-    if OpenAI is None:
-        raise RuntimeError("openai package is not installed. Install requirements before running.")
     if not api_key:
         raise RuntimeError("OpenAI API key not found. Set VITE_OPENAI_API_KEY or OPENAI_API_KEY.")
 
-    client = OpenAI(api_key=api_key)
+    client = http_client(api_key)
 
-    # Load combined index and derive allowed external_ids
     index_docs = load_combined_index(args.combined_index)
     allowed_external_ids = {doc.get("File") for doc in index_docs if doc.get("File")}
 
@@ -213,16 +181,15 @@ def main() -> int:
 
     # Optionally list vector store files to find unknowns not tracked in state
     unknowns: List[Dict[str, Any]] = []
-    files = list_vector_store_files(client, vector_store_id)
+    files = list_vector_store_files_httpx(client, vector_store_id)
     for f in files:
         eid = f.get("external_id")
-        if not eid:
-            # Untracked/unknown file (no external_id metadata); only delete if explicitly requested
+        if not eid and args.include_unknown:
             unknowns.append({"id": f.get("id"), "external_id": None, "source": "unknown"})
             continue
-        if eid not in allowed_external_ids and eid not in state.docs:
-            # Not tracked in state, not present in allowed set – consider as unknown stale
-            unknowns.append({"id": f.get("id"), "external_id": eid, "source": "unknown"})
+        if eid and eid not in allowed_external_ids and eid not in state.docs:
+            if args.include_unknown:
+                unknowns.append({"id": f.get("id"), "external_id": eid, "source": "unknown"})
 
     log_event(
         "reconcile.list",
@@ -234,26 +201,24 @@ def main() -> int:
         },
     )
 
-    # Merge unknowns into deletion plan only if requested
     if args.include_unknown:
         to_delete.extend(unknowns)
 
     log_event("reconcile.plan", toDelete=len(to_delete))
-    for f in to_delete[:50]:  # cap listing
+    for f in to_delete[:50]:
         log_event("reconcile.item", externalId=f.get("external_id"), fileId=f.get("id"), source=f.get("source"))
 
     if args.dry_run:
         log_event("reconcile.complete", dryRun=True)
         return 0
 
-    # Perform deletions
     failures: List[Dict[str, Any]] = []
     for f in to_delete:
         file_id = f.get("id")
         eid = f.get("external_id")
         try:
             with_retries(
-                lambda: client.beta.vector_stores.files.delete(vector_store_id=vector_store_id, file_id=file_id),  # type: ignore[attr-defined]
+                lambda: delete_vector_store_file_httpx(client, vector_store_id, file_id),
                 retries=args.max_retries,
                 base_delay=args.retry_base_delay,
                 action="delete",
@@ -267,7 +232,7 @@ def main() -> int:
             log_event("reconcile.error", externalId=eid, fileId=file_id, error=str(exc))
 
     if failures:
-        state.save()  # save any successful removals
+        state.save()
         log_event("reconcile.complete", dryRun=False, failures=failures)
         return 1
 
