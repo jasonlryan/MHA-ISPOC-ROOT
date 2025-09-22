@@ -16,12 +16,18 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 # Ensure local packages are importable on CI
-sys.path.insert(0, os.fspath(Path(__file__).resolve().parent))
-
-from scripts.utils.state import ensure_state_file
-from scripts.vector_store_upsert import load_env
-
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, os.fspath(ROOT))
+
+try:
+    from scripts.utils.state import ensure_state_file  # type: ignore
+    from scripts.vector_store_upsert import load_env  # type: ignore
+except ModuleNotFoundError:
+    # Fallback: add scripts/ directly and import relative modules
+    sys.path.insert(0, os.fspath(ROOT / "scripts"))
+    from utils.state import ensure_state_file  # type: ignore
+    from vector_store_upsert import load_env  # type: ignore
+
 STATE_DIR = ROOT / "state"
 DEFAULT_STATE_FILE = STATE_DIR / "vector_state.json"
 DEFAULT_LOCK_PATH = STATE_DIR / "pipeline.lock"
