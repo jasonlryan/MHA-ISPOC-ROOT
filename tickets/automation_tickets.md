@@ -73,6 +73,11 @@
   - Schemas checked into repo and referenced in documentation.
 - **Dependencies**: none (can run parallel to AUT-1/2 but integrate with orchestrator in AUT-6).
 - **Linked Deliverables**: #5, #6
+- **Status**: Approved ✅
+- **Verification Notes**:
+  - Schemas present: `schemas/*.schema.json` (policy/guide docs, policy/guide indexes, combined index)
+  - Unit tests passed: `python3 -m unittest scripts/tests/test_validation.py`
+  - Full validation succeeded: `python3 scripts/validate_outputs.py` reported `run.complete` status `passed` for all datasets
 
 ## AUT-5: Change Detection for AI Generation Scripts
 - **Goal**: Gate existing AI question generation scripts to skip unchanged documents based on canonical hash metadata.
