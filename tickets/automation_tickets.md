@@ -92,6 +92,11 @@
   - Documentation covers bypass/force flags.
 - **Dependencies**: AUT-1 (hashing/state), AUT-4 (validation integration point).
 - **Linked Deliverables**: supports acceptance criteria (idempotency).
+- **Status**: Approved ✅
+- **Verification Notes**:
+  - Real run updated 1 policy (CP002) and 1 guide (12. How to use Photograph Upload (1))
+  - Subsequent dry-run for each showed “skipped: unchanged” based on stored hashes
+  - No vector store operations performed during AUT-5 testing; local indexes/state only
 
 ## AUT-6: Orchestration Entry Point
 - **Goal**: Deliver `run_pipeline.py` to execute the full DOCX → JSON → Index → AI → Combine → Upsert → Reconcile sequence with robust controls.
