@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CombinedIndex",
+  "type": "object",
+  "required": ["MHA Documents"],
+  "properties": {
+    "MHA Documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "Document",
+          "File",
+          "Description",
+          "Questions Answered",
+          "Document Type"
+        ],
+        "properties": {
+          "Document": {
+            "type": "string",
+            "minLength": 1
+          },
+          "File": {
+            "type": "string",
+            "pattern": ".+\\.json$"
+          },
+          "Description": {
+            "type": "string"
+          },
+          "Questions Answered": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "Document Type": {
+            "type": "string",
+            "enum": ["Policy", "Guide"]
+          }
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
