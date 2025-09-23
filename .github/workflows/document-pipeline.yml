@@ -62,6 +62,8 @@ jobs:
           echo "skip_ai=$SKIP_AI_INPUT" >> $GITHUB_OUTPUT
 
       - name: Run pipeline
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/scripts
         run: |
           set -euo pipefail
           DRY_FLAG=""
