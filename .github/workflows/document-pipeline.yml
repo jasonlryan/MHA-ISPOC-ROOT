@@ -41,6 +41,10 @@ jobs:
           echo "VITE_OPENAI_API_KEY=$OPENAI_API_KEY" >> $GITHUB_ENV
           echo "TEST_VECTOR_STORE_ID=$TEST_VECTOR_STORE_ID" >> $GITHUB_ENV
 
+      - name: Check environment
+        run: |
+          PYTHONPATH=. python scripts/check_env.py --json
+
       - name: Run unit tests
         run: |
           PYTHONPATH=. python -m unittest discover -s scripts/tests -t .

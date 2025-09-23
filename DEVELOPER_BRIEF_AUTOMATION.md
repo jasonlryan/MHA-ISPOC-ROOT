@@ -125,3 +125,7 @@ python scripts/reconcile_vector_store.py  # optional nightly
 - All acceptance criteria met on the `automate` branch
 - Documentation updated; PR with passing checks and code review
 - Optional: CI/runbook enabled and verified
+
+#### References
+- Runbook: `docs/pipeline_runbook.md`
+- Workflow guide: `.github/workflows/README.md`

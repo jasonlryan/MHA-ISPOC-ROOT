@@ -1,0 +1,50 @@
+# Azure Container Apps Job template for MHA iSPOC pipeline
+# Usage:
+#  az login
+#  az account set --subscription <SUB_ID>
+#  az group create -n <RG_NAME> -l <LOCATION>
+#  az containerapp env create -g <RG_NAME> -n <ENV_NAME> -l <LOCATION>
+#  az containerapp job create -g <RG_NAME> -n <JOB_NAME> \
+#    --environment <ENV_NAME> \
+#    --image <acr>.azurecr.io/mha-ispoc:latest \
+#    --cpu 1.0 --memory 2Gi \
+#    --replica-timeout 3600 \
+#    --replica-retry-limit 1 \
+#    --trigger-type Manual \
+#    --registry-server <acr>.azurecr.io --registry-username <ACR_USER> --registry-password <ACR_PASS> \
+#    --env-vars VITE_OPENAI_API_KEY=secretref:openai-key TEST_VECTOR_STORE_ID=secretref:test-vector-store-id \
+#    --secrets openai-key=<VALUE> test-vector-store-id=<VALUE> \
+#    --args "python" "run_pipeline.py" "--log-level" "INFO"
+#
+# For a storage mount, add --mounts and update 'volumeMounts' below once supported by CLI/YAML.
+
+apiVersion: 2023-05-01
+kind: Job
+metadata:
+  name: mha-ispoc-pipeline
+spec:
+  environmentId: <ENV_RESOURCE_ID>
+  template:
+    containers:
+      - name: runner
+        image: <acr>.azurecr.io/mha-ispoc:latest
+        env:
+          - name: VITE_OPENAI_API_KEY
+            secretRef: openai-key
+          - name: TEST_VECTOR_STORE_ID
+            secretRef: test-vector-store-id
+        command: ["python"]
+        args: ["run_pipeline.py", "--log-level", "INFO"]
+        resources:
+          cpu: 1.0
+          memory: 2Gi
+        # volumeMounts:
+        #   - mountPath: /workspace/app/state
+        #     volumeName: state-share
+    # volumes:
+    #   - name: state-share
+    #     storageType: AzureFile
+    #     # fill in your Storage Account and File Share references
+  replicaRetryLimit: 1
+  replicaTimeout: 3600
+  triggerType: Manual

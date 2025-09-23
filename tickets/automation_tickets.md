@@ -147,6 +147,12 @@
   - Runbook enumerates rollback procedures and nightly reconciliation steps.
 - **Dependencies**: AUT-2 through AUT-7.
 - **Linked Deliverables**: #8
+ - **Status**: Approved ✅
+ - **Verification Notes**:
+   - Added `.github/workflows/README.md` covering purpose, triggers, required secrets, safety controls, artifacts, local vs CI runs, production promotion, and troubleshooting
+   - `scripts/README.md` documents DOCX→JSON conversion usage; orchestration and flags covered in workflow README
+   - Documentation references orchestrator `run_pipeline.py`, validation `schemas/*.schema.json`, upsert and reconcile steps
+   - Rollback/safety: CI constrained to `automate`, dry‑run and skip‑AI defaults, artifact retention for post‑failure inspection; production promotion steps outlined
 
 ## AUT-9: Dependency & Environment Updates
 - **Goal**: Ensure `scripts/requirements.txt` and supporting tooling cover new dependencies and environment bootstrap scripts.
@@ -159,3 +165,11 @@
   - Running orchestrator without `.env` surfaces clear error with remediation steps.
 - **Dependencies**: Supports all other tickets.
 - **Linked Deliverables**: #6
+ - **Status**: Approved ✅
+ - **Verification Notes**:
+   - Dependencies present in `scripts/requirements.txt`: `openai`, `python-dotenv`, `jsonschema`, `httpx`; CI installs them successfully
+   - Environment checker added: `scripts/check_env.py` reports key/store presence and missing modules
+   - Orchestrator/env errors are explicit:
+     - `vector_store_upsert.py` on missing key: “OpenAI API key not found… Set VITE_OPENAI_API_KEY or OPENAI_API_KEY.”
+     - Missing vector store: use `--vector-store-id` or set `TEST_VECTOR_STORE_ID` (preferred) or `VECTOR_STORE_ID`
+     - Runbook and workflow README document required secrets and local setup

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MHA iSPOC Pipeline — Quickstart (Power Automate + Azure)</title>
+<style>
+  body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #1b1f23; }
+  .container { max-width: 980px; margin: 0 auto; padding: 24px; }
+  h1, h2, h3 { margin: 16px 0 8px; }
+  p { line-height: 1.6; }
+  .card { border: 1px solid #e1e4e8; border-radius: 8px; padding: 16px; margin: 16px 0; background: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  pre { background: #0b1021; color: #e6edf3; padding: 12px; border-radius: 6px; overflow: auto; font-size: 13px; }
+  code.inline { background: #f6f8fa; padding: 2px 4px; border-radius: 4px; }
+  .small { font-size: 14px; color: #4b5563; }
+  .step { font-weight: 600; margin-top: 8px; }
+  .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; background: #f6f8fa; border: 1px solid #e1e4e8; border-radius: 4px; padding: 0 6px; }
+  .copy { float: right; font-size: 12px; cursor: pointer; }
+</style>
+<script>
+  function copyToClipboard(id) {
+    const el = document.getElementById(id);
+    const text = el.innerText.trim();
+    navigator.clipboard.writeText(text).then(() => {
+      alert('Copied to clipboard');
+    });
+  }
+</script>
+</head>
+<body>
+  <div class="container">
+    <h1>MHA iSPOC Pipeline — Quickstart</h1>
+    <p class="small">Power Automate + Azure guide with copy-ready commands and templates.</p>
+
+    <div class="card">
+      <h2>1) Build and Push Container Image</h2>
+      <p>Use the provided <code class="inline">infra/Dockerfile</code>. Replace placeholders enclosed in &lt; &gt;.</p>
+      <div class="copy" onclick="copyToClipboard('cmd1')">Copy</div>
+      <pre id="cmd1">az login
+az account set --subscription &lt;SUBSCRIPTION_ID&gt;
+az acr login --name &lt;ACR_NAME&gt;
+docker build -t &lt;ACR_NAME&gt;.azurecr.io/mha-ispoc:latest -f infra/Dockerfile .
+docker push &lt;ACR_NAME&gt;.azurecr.io/mha-ispoc:latest</pre>
+    </div>
+
+    <div class="card">
+      <h2>2) Provision Azure Container Apps Job</h2>
+      <p>Use the CLI snippet to create the environment and job with secrets.</p>
+      <div class="copy" onclick="copyToClipboard('cmd2')">Copy</div>
+      <pre id="cmd2">az group create -n &lt;RG_NAME&gt; -l &lt;LOCATION&gt;
+az containerapp env create -g &lt;RG_NAME&gt; -n &lt;ENV_NAME&gt; -l &lt;LOCATION&gt;
+az containerapp job create -g &lt;RG_NAME&gt; -n &lt;JOB_NAME&gt; \ 
+  --environment &lt;ENV_NAME&gt; \ 
+  --image &lt;ACR_NAME&gt;.azurecr.io/mha-ispoc:latest \ 
+  --cpu 1.0 --memory 2Gi \ 
+  --replica-timeout 3600 \ 
+  --replica-retry-limit 1 \ 
+  --trigger-type Manual \ 
+  --registry-server &lt;ACR_NAME&gt;.azurecr.io \ 
+  --registry-username &lt;ACR_USER&gt; --registry-password &lt;ACR_PASS&gt; \ 
+  --env-vars VITE_OPENAI_API_KEY=secretref:openai-key TEST_VECTOR_STORE_ID=secretref:test-vector-store-id \ 
+  --secrets openai-key=&lt;OPENAI_API_KEY&gt; test-vector-store-id=&lt;TEST_VECTOR_STORE_ID&gt; \ 
+  --args "python" "run_pipeline.py" "--log-level" "INFO"</pre>
+      <p class="small">A YAML template is also available at <code class="inline">infra/aca-job.yaml</code>.</p>
+    </div>
+
+    <div class="card">
+      <h2>3) (Optional) Add Storage Mount for Persisting State</h2>
+      <p>Mount an Azure File Share to persist <code class="inline">state/vector_state.json</code> and artifacts across runs.</p>
+      <div class="copy" onclick="copyToClipboard('cmd3')">Copy</div>
+      <pre id="cmd3"># Create storage account and file share
+az storage account create -n &lt;STORAGE_NAME&gt; -g &lt;RG_NAME&gt; -l &lt;LOCATION&gt; --sku Standard_LRS
+az storage share create --account-name &lt;STORAGE_NAME&gt; --name mha-ispoc-state
+
+# Retrieve connection string (or use identity + key vault)
+AZURE_STORAGE_CONNECTION_STRING=$(az storage account show-connection-string -n &lt;STORAGE_NAME&gt; -g &lt;RG_NAME&gt; --query connectionString -o tsv)
+
+# Update job to add mount (refer to latest CLI for mounts syntax)
+# az containerapp job update ... --add volume/mounts and env as needed</pre>
+      <p class="small">Consult Azure docs for current Container Apps Job volume mount syntax.</p>
+    </div>
+
+    <div class="card">
+      <h2>4) Test Run</h2>
+      <p>Trigger a manual run via CLI (or Power Automate later).</p>
+      <div class="copy" onclick="copyToClipboard('cmd4')">Copy</div>
+      <pre id="cmd4">az containerapp job start -g &lt;RG_NAME&gt; -n &lt;JOB_NAME&gt;</pre>
+      <div class="copy" onclick="copyToClipboard('cmd5')">Copy</div>
+      <pre id="cmd5">az containerapp job list-executions -g &lt;RG_NAME&gt; -n &lt;JOB_NAME&gt; -o table</pre>
+      <div class="copy" onclick="copyToClipboard('cmd6')">Copy</div>
+      <pre id="cmd6"># For initial validation runs, you can customize the command:
+az containerapp job update -g &lt;RG_NAME&gt; -n &lt;JOB_NAME&gt; \ 
+  --args "python" "run_pipeline.py" "--dry-run" "--skip-ai" "--log-level" "INFO"</pre>
+    </div>
+
+    <div class="card">
+      <h2>5) Power Automate Flow</h2>
+      <ol>
+        <li><span class="step">Trigger</span>: SharePoint — When a file is created (properties only), folder <code class="inline">/raw policies</code>, filter extension <code class="inline">docx</code>.</li>
+        <li><span class="step">Action</span>: HTTP call to Azure to start the Container Apps Job execution.
+          <div class="small">Use an Azure AD app with appropriate permissions, or a custom connector. Provide env vars and (optionally) a command override.</div>
+        </li>
+        <li><span class="step">Wait</span>: Poll job execution status until Succeeded/Failed.</li>
+        <li><span class="step">Notify</span>: Post to Teams or email with result and a link to logs.</li>
+      </ol>
+      <p class="small">For Automation Runbook, use the "Create Job" action and pass parameters accordingly.</p>
+    </div>
+
+    <div class="card">
+      <h2>6) One-Command Reference</h2>
+      <div class="copy" onclick="copyToClipboard('cmd7')">Copy</div>
+      <pre id="cmd7">python -m pip install -r scripts/requirements.txt
+python run_pipeline.py --log-level INFO</pre>
+      <p class="small">Flags: <span class="kbd">--dry-run</span>, <span class="kbd">--skip-ai</span>, <span class="kbd">--skip-index</span>, <span class="kbd">--skip-upload</span>, <span class="kbd">--skip-validation</span></p>
+    </div>
+
+    <div class="card">
+      <h2>7) Troubleshooting</h2>
+      <ul>
+        <li>Missing API key: set <code class="inline">VITE_OPENAI_API_KEY</code> on the job.</li>
+        <li>Vector store ID not set: set <code class="inline">TEST_VECTOR_STORE_ID</code> or <code class="inline">VECTOR_STORE_ID</code>.</li>
+        <li>Validation errors: run <code class="inline">python scripts/validate_outputs.py</code> for schema details.</li>
+        <li>SharePoint file not detected: confirm folder path and extension filter.</li>
+      </ul>
+    </div>
+
+    <p class="small">Templates and docs: <code class="inline">infra/Dockerfile</code>, <code class="inline">infra/aca-job.yaml</code>, <code class="inline">docs/CLIENT_GUIDE_POWER_AUTOMATE_AZURE.md</code>, <code class="inline">docs/POWER_AUTOMATE_FLOW_OUTLINE.md</code>.</p>
+  </div>
+</body>
+</html>

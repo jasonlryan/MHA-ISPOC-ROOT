@@ -161,6 +161,8 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="overview">Overview</button>
       <button class="tab-btn" data-tab="power">Power Automate</button>
+      <button class="tab-btn" data-tab="client-flow">Client Flow</button>
+      <button class="tab-btn" data-tab="client-brief">Client Brief</button>
     </div>
 
     <div id="tab-overview" class="tab-panel active">
@@ -322,11 +324,118 @@ python scripts/combine_indexes.py</p>
     </div>
   </div>
 
+  <div id="tab-client-flow" class="tab-panel">
+    <div class="section-title">Client-side Automation: SharePoint + Power Automate Flow</div>
+    <div class="grid">
+      <div class="card col-span-3">
+        <h3>Inputs: SharePoint Libraries</h3>
+        <p class="mono">SharePoint › Site › Documents › raw_policies/</p>
+        <p class="mono">SharePoint › Site › Documents › raw_guides/</p>
+        <p class="small">Clients drop DOCX files into managed libraries with versioning and approvals.</p>
+      </div>
+      <div class="arrow col-span-6">Trigger</div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc2"></span> Flow Triggers</h3>
+        <p class="small">- When file created or modified in library</p>
+        <p class="small">- Or scheduled daily at 02:00</p>
+        <p class="small">- Optional manual run button</p>
+      </div>
+
+      <div class="arrow col-span-6">Process</div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc"></span> Convert DOCX → JSON</h3>
+        <p>Runs Python container/runbook to execute:</p>
+        <p class="mono">python scripts/convert_to_json.py</p>
+        <p class="mono">python scripts/convert_guides_to_json.py</p>
+        <p class="small">Outputs to <code class="inline">VECTOR_JSON</code> and <code class="inline">VECTOR_GUIDES_JSON</code>.</p>
+      </div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc2"></span> Build Indexes</h3>
+        <p class="mono">python scripts/build_policy_index.py</p>
+        <p class="mono">python scripts/build_guide_index.py</p>
+        <p class="small">Generates <code class="inline">Policy_Documents_Metadata_Index.json</code> and <code class="inline">Guide_Documents_Metadata_Index.json</code>.</p>
+      </div>
+
+      <div class="arrow col-span-6">Enhance</div>
+      <div class="card col-span-3">
+        <h3><span class="dot acc3"></span> AI Questions</h3>
+        <p class="mono">python scripts/generate_ai_questions.py</p>
+        <p class="mono">python scripts/generate_guide_ai_questions.py</p>
+        <p class="small">Updates <code class="inline">Questions Answered</code> fields using OpenAI.</p>
+      </div>
+      <div class="card col-span-3">
+        <h3>Combine</h3>
+        <p class="mono">python scripts/combine_indexes.py</p>
+        <p class="small">Writes <code class="inline">MHA_Documents_Metadata_Index.json</code>.</p>
+      </div>
+
+      <div class="arrow col-span-6">Vector Store</div>
+      <div class="card col-span-6">
+        <h3>Upsert to OpenAI Vector Store</h3>
+        <p class="mono">python scripts/vector_store_upsert.py</p>
+        <p class="small">Uploads JSON chunks and metadata. Uses secret <code class="inline">VITE_OPENAI_API_KEY</code>.</p>
+      </div>
+    </div>
+
+    <div class="section-title">Runtime Options</div>
+    <div class="card">
+      <p class="small"><b>Runner</b>: Azure Automation Runbook (Python) or Container Apps Job. SharePoint file content is fetched via Graph/connector.</p>
+      <p class="small"><b>Idempotency</b>: Skip AI/index steps if hashes unchanged since last successful run.</p>
+      <p class="small"><b>Observability</b>: Log per-stage outputs; post summary to Teams.</p>
+    </div>
+  </div>
+
+  <div id="tab-client-brief" class="tab-panel">
+    <div class="section-title">Client Implementation Brief</div>
+    <div class="card">
+      <h3>Scope</h3>
+      <p class="small">Enable client to self-serve ingestion from SharePoint to iSPOC tool via automated pipeline.</p>
+      <h3>Architecture</h3>
+      <ul>
+        <li class="small"><b>Storage</b>: SharePoint libraries <code class="inline">raw_policies</code>, <code class="inline">raw_guides</code></li>
+        <li class="small"><b>Orchestration</b>: Power Automate triggering Azure Runbook/Container Job</li>
+        <li class="small"><b>Processing</b>: Repo scripts in this project</li>
+        <li class="small"><b>Vector Store</b>: OpenAI vector store referenced by iSPOC</li>
+      </ul>
+      <h3>Secrets</h3>
+      <ul>
+        <li class="small"><code class="inline">VITE_OPENAI_API_KEY</code> (Key Vault/Automation credential)</li>
+        <li class="small">Optional: Graph app registration for file download</li>
+      </ul>
+      <h3>Flow Steps</h3>
+      <ol>
+        <li class="small">Trigger on SharePoint file change or schedule</li>
+        <li class="small">Download changed files to runner workspace</li>
+        <li class="small">Run conversion, indexing, AI, combine, upsert</li>
+        <li class="small">Publish artifacts and notify stakeholders</li>
+      </ol>
+      <h3>Controls</h3>
+      <ul>
+        <li class="small">Versioning and approvals on SharePoint libraries</li>
+        <li class="small">Hash-based change detection to reduce costs</li>
+        <li class="small">Error alerting to Teams/Email</li>
+      </ul>
+      <h3>Commands (Runner)</h3>
+      <p class="mono">cd /runner/work/MHA && \
+python -m pip install -r scripts/requirements.txt && \
+python scripts/convert_to_json.py && \
+python scripts/convert_guides_to_json.py && \
+python scripts/build_policy_index.py && \
+python scripts/build_guide_index.py && \
+python scripts/generate_ai_questions.py && \
+python scripts/generate_guide_ai_questions.py && \
+python scripts/combine_indexes.py && \
+python scripts/vector_store_upsert.py</p>
+    </div>
+  </div>
+
   <script>
     const buttons = document.querySelectorAll('.tab-btn');
     const panels = {
       overview: document.getElementById('tab-overview'),
-      power: document.getElementById('tab-power')
+      power: document.getElementById('tab-power'),
+      'client-flow': document.getElementById('tab-client-flow'),
+      'client-brief': document.getElementById('tab-client-brief')
     };
     buttons.forEach(btn => {
       btn.addEventListener('click', () => {

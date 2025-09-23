@@ -19,11 +19,32 @@ except ImportError:  # pragma: no cover
     def load_dotenv(*_args: Any, **_kwargs: Any) -> bool:  # type: ignore
         return False
 
-from scripts.utils.state import (
-    VectorState,
-    compute_content_hash_from_data,
-    ensure_state_file,
-)
+try:
+    from scripts.utils.state import (  # type: ignore
+        VectorState,
+        compute_content_hash_from_data,
+        ensure_state_file,
+    )
+except ModuleNotFoundError:
+    try:
+        # Fallback when running as a file (PYTHONPATH points to scripts/)
+        from utils.state import (  # type: ignore
+            VectorState,
+            compute_content_hash_from_data,
+            ensure_state_file,
+        )
+    except ModuleNotFoundError:
+        # Final fallback: import by file path to survive path quirks
+        import importlib.util as _importlib_util
+        ROOT = Path(__file__).resolve().parents[1]
+        _state_path = ROOT / "scripts" / "utils" / "state.py"
+        _spec = _importlib_util.spec_from_file_location("state_local", os.fspath(_state_path))
+        if _spec is None or _spec.loader is None:
+            raise
+        _mod = _spec.loader.load_module()  # type: ignore[attr-defined]
+        VectorState = getattr(_mod, "VectorState")  # type: ignore
+        compute_content_hash_from_data = getattr(_mod, "compute_content_hash_from_data")  # type: ignore
+        ensure_state_file = getattr(_mod, "ensure_state_file")  # type: ignore
 
 try:
     from openai import OpenAI

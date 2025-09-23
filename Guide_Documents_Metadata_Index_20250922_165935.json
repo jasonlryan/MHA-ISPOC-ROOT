@@ -1,0 +1,284 @@
+{
+    "Guide Documents": [
+        {
+            "Document": "How to use Photograph Upload (1)",
+            "File": "12. How to use Photograph Upload (1).json",
+            "Description": "Steps to How to use Photograph Upload (1).",
+            "Questions Answered": [
+                "What are the exact steps to upload a photograph from the handset using the ‘Photograph Upload’ interaction?",
+                "How do I rename a photograph after uploading to include a description and date taken?",
+                "What do I need to do after uploading the photograph to ensure it is attached and displayed under the Wound Care Support Plan?"
+            ]
+        },
+        {
+            "Document": "How to use the Mi-Fi Hotspot device",
+            "File": "19. How to use the Mi-Fi Hotspot device.json",
+            "Description": "DSP – Nourish. How to use the Mi-Fi device The Mi-Fi Hotspot is to be used when the main MHA Wi-Fi is not available. Colleagues will be able to follow the instructions below to connect their Nouris...",
+            "Questions Answered": [
+                "How do I turn on and off the Mi-Fi Hotspot device correctly?",
+                "What steps do I need to follow to connect my Nourish device to the Mi-Fi Hotspot?",
+                "What should I do before logging out of the Nourish device to ensure all interactions are saved?"
+            ]
+        },
+        {
+            "Document": "Appendix 2 - Guidance on writing JD  PS",
+            "File": "Appendix 2 - Guidance on writing JD  PS.json",
+            "Description": "Appendix 2 – Job Description & Person Specification Guidance This document provides guidance on writing a job description and person specification. Job Description A job description is a written do...",
+            "Questions Answered": [
+                "What key elements should be included when writing the main purpose of a job description?",
+                "How should the principal responsibilities be described to effectively convey the job duties?",
+                "What details about supervision and management need to be included in the job description?"
+            ]
+        },
+        {
+            "Document": "How to add a Quick Note",
+            "File": "07. How to add a Quick Note.json",
+            "Description": "Steps to How to add a Quick Note.",
+            "Questions Answered": [
+                "How do I locate and access the 'Quick Notes' section within a resident's profile in Nourish?",
+                "What type of information should be included in a quick note versus the Critical Information section?",
+                "After adding or updating a quick note, how can I ensure the changes are saved and visible to all users?"
+            ]
+        },
+        {
+            "Document": "Activity Coordinators User Guide ",
+            "File": "20. Activity Coordinators User Guide .json",
+            "Description": "How to Record Meaningful Engagement and Activities in Nourish Activity Coordinators Please ensure you have read the Meaningful Engagement and Activities Policy and procedure; this will give you a g...",
+            "Questions Answered": [
+                "How do I create and complete an activity entry for a resident in the Nourish Activity Coordinators system?",
+                "What information should I record about a new resident's hobbies and interests to personalize their activities?",
+                "What are the best practices for recording interactions and meaningful engagements promptly and accurately?"
+            ]
+        },
+        {
+            "Document": "How to create a report in Nourish DSP",
+            "File": "02. How to create a report in Nourish DSP.json",
+            "Description": "Steps to How to create a report in Nourish DSP.",
+            "Questions Answered": [
+                "How do I access the reports section in Nourish DSP?",
+                "What steps do I need to follow to create a timeline report from a resident's interactions?",
+                "Are there any specific filters or options I can apply when generating a timeline report?"
+            ]
+        },
+        {
+            "Document": "How to add a New Staff Member",
+            "File": "01. How to add a New Staff Member.json",
+            "Description": "Steps to How to add a New Staff Member.",
+            "Questions Answered": [
+                "Which icon do I need to click on the left-hand side of the screen to access the list of colleagues?",
+                "What are the required fields marked with an asterisk that must be filled when adding a new staff member?",
+                "How do I handle the username and password fields when adding a new staff member?"
+            ]
+        },
+        {
+            "Document": "How to check compliance using the Handover (1)",
+            "File": "09. How to check compliance using the Handover (1).json",
+            "Description": "Steps to How to check compliance using the Handover (1).",
+            "Questions Answered": [
+                "How do I access the handover log to check compliance for my residents?",
+                "What date and time range should I select when checking daily compliance and how do I adjust it?",
+                "What specific issues should I look for in the handover notes to ensure interactions are completed correctly?"
+            ]
+        },
+        {
+            "Document": "How to complete the NEW Nourish Wound Management Interactions 1",
+            "File": "17. How to complete the NEW Nourish Wound Management Interactions 1.json",
+            "Description": "Table of Contents Introducing the Wound Management View Resident’s Care Type 'Wound Management View' available on mobile and web How do I record a new wound or skin concern? Completing the Initial ...",
+            "Questions Answered": [
+                "How do I record a new wound or skin concern in the Nourish Wound Management View?",
+                "What steps are involved in completing the initial and ongoing wound assessments?",
+                "How can I view the history of a wound and reopen an inactive wound within the system?"
+            ]
+        },
+        {
+            "Document": "How to add and remove parameters from an interaction (3)",
+            "File": "16. How to add and remove parameters from an interaction (3).json",
+            "Description": "Steps to How to add and remove parameters from an interaction (3).",
+            "Questions Answered": [
+                "How do I locate and select the specific interaction I want to personalise for a resident?",
+                "What steps do I follow to add or remove parameters within the advanced configuration of an interaction?",
+                "How do I save the changes after modifying the parameters in a personalised interaction?"
+            ]
+        },
+        {
+            "Document": "How to personalise the Daily Fluid Intake interaction and add a fluid target ",
+            "File": "06. How to personalise the Daily Fluid Intake interaction and add a fluid target .json",
+            "Description": "Steps to How to personalise the Daily Fluid Intake interaction and add a fluid target .",
+            "Questions Answered": [
+                "How do I select and personalise the Daily Fluid Intake interaction for a specific resident?",
+                "What steps do I follow to add or remove parameters in the Daily Fluid Intake interaction?",
+                "How do I correctly add a personalised fluid target, including setting the Intake Amount and target value?"
+            ]
+        },
+        {
+            "Document": "How to create an Open interaction report in Nourish DSP",
+            "File": "03. How to create an Open interaction report in Nourish DSP.json",
+            "Description": "Steps to How to create an Open interaction report in Nourish DSP.",
+            "Questions Answered": [
+                "How do I navigate to the reports section in Nourish DSP to create an Open interaction report?",
+                "What specific steps do I need to follow to generate a timeline report in Nourish DSP?",
+                "Are there any prerequisites or permissions required to access and run reports in Nourish DSP?"
+            ]
+        },
+        {
+            "Document": "WI iTrent Entering Right to Work Disclosure and Registration Checks into iTrent (1)",
+            "File": "WI iTrent Entering Right to Work Disclosure and Registration Checks into iTrent (1).json",
+            "Description": "Steps to WI iTrent Entering Right to Work Disclosure and Registration Checks into iTrent (1).",
+            "Questions Answered": [
+                "How do I enter and save the reference number and status for a Right to Work check in iTrent?",
+                "What specific details and evidence are required when entering a Time Limited Right to Work (Visa) check, including Positive Verification Notices?",
+                "How can I add multiple Right to Work checks and upload the necessary evidence attachments in iTrent?"
+            ]
+        },
+        {
+            "Document": "How to check for Agency Compliance",
+            "File": "18. How to check for Agency Compliance.json",
+            "Description": "Steps to How to check for Agency Compliance.",
+            "Questions Answered": [
+                "How do I create and run a Timeline report to check if agency staff have recorded their names in the Daily Note?",
+                "What specific filters and settings should I select when generating the Timeline report for agency compliance?",
+                "How do I interpret the Timeline report to verify that agency carers have properly entered their names in the Daily Note for each interaction?"
+            ]
+        },
+        {
+            "Document": "Resident desktop PC service description",
+            "File": "Resident desktop PC service description.json",
+            "Description": "A compact Lenovo ThinkCentre M70q Gen 2 Tiny (Intel) desktop PC along with 22” monitor, keyboard, mouse, webcam, and headset. There is also the optional choice of a printer for use by residents and...",
+            "Questions Answered": [
+                "What are the space and power socket requirements for setting up the resident desktop PC and optional printer?",
+                "What consumables are the care home or retirement living site responsible for purchasing for the resident PC and printer?",
+                "Is a wired network connection required for the resident desktop PC, and what should be done if a data point is not already available?"
+            ]
+        },
+        {
+            "Document": "How to set up DSP Quick Close Tags Night stickers",
+            "File": "04. How to set up DSP Quick Close Tags Night stickers.json",
+            "Description": "Steps to How to set up DSP Quick Close Tags Night stickers.",
+            "Questions Answered": [
+                "What should I do if the device shows 'Quick Close Tag failed' when trying to record the sticker?",
+                "Can I set up the DSP Quick Close Tags on a laptop or desktop computer?",
+                "How do I use the Night stickers after they have been set up and placed in the resident’s room?"
+            ]
+        },
+        {
+            "Document": "How to Attach a Supporting Document or Photo to a Support Plan",
+            "File": "13. How to Attach a Supporting Document or Photo to a Support Plan.json",
+            "Description": "Steps to How to Attach a Supporting Document or Photo to a Support Plan.",
+            "Questions Answered": [
+                "How do I locate and download a photograph or supporting document from a resident's profile in Nourish?",
+                "What are the exact steps to attach a downloaded document or photo to a specific support plan?",
+                "How can I confirm that the photograph or document has been successfully uploaded and attached to the support plan?"
+            ]
+        },
+        {
+            "Document": "How to reset your MHA passwords",
+            "File": "How to reset your MHA passwords.json",
+            "Description": "How to Reset Your MHA Passwords This guide is to help you reset the passwords for your MHA account and Jibble. Your MHA account allows you to access various systems such as logging into MHA compute...",
+            "Questions Answered": [
+                "How do I reset my MHA account password if I have forgotten my current password and have not enrolled in security questions?",
+                "What is the process to reset my Jibble password using the app?",
+                "Who do I contact if I cannot reset my MHA password using the online method?"
+            ]
+        },
+        {
+            "Document": "Phishing Email Advice",
+            "File": "Phishing Email Advice.json",
+            "Description": "1. Don’t believe your eyes. Sender name, Email addresses and domain names can be easily spoofed. It is, therefore, crucial that you check the domain name for spelling alterations on suspicious emai...",
+            "Questions Answered": [
+                "How can I verify if the sender's email address and domain are legitimate and not spoofed?",
+                "What should I do if an email asks me to share sensitive information or perform urgent actions like buying gift cards?",
+                "How can I safely check links and attachments in suspicious emails without risking my device's security?"
+            ]
+        },
+        {
+            "Document": "WI iTrent Entering Right to Work Disclosure and Registration Checks into iTrent",
+            "File": "WI iTrent Entering Right to Work Disclosure and Registration Checks into iTrent.json",
+            "Description": "Steps to WI iTrent Entering Right to Work Disclosure and Registration Checks into iTrent.",
+            "Questions Answered": [
+                "How do I enter and save a new Right to Work check reference number and status in iTrent?",
+                "What specific details and evidence are required when entering a Time Limited Right to Work (Visa) check, and how do I upload the related documents?",
+                "How do I add multiple Right to Work checks for the same employee within iTrent?"
+            ]
+        },
+        {
+            "Document": "How to add a linked interaction to a Support Plan",
+            "File": "15. How to add a linked interaction to a Support Plan.json",
+            "Description": "Steps to How to add a linked interaction to a Support Plan.",
+            "Questions Answered": [
+                "How do I add a new linked interaction to an existing support plan without removing the pre-set interactions?",
+                "What steps should I follow to select and link the appropriate interaction from the drop-down list in the interactions section?",
+                "After adding a linked interaction, how do I save the changes to ensure the interaction is properly linked to the support plan?"
+            ]
+        },
+        {
+            "Document": "Appendix 1 - New Role Approval and Evaluation Procedure",
+            "File": "Appendix 1 - New Role Approval and Evaluation Procedure.json",
+            "Description": "New Role Approval and Evaluation Process Outlined below is the process for the approval, evaluation and set up within MHA People for a new role within MHA. The scope of this process includes new pe...",
+            "Questions Answered": [
+                "What steps must the recruiting manager follow to get a new role approved and evaluated within MHA?",
+                "How and when can the recruiting manager appeal the job evaluation grade and salary banding decision?",
+                "What documentation and approvals are required before the new role can be set up in the HR system?"
+            ]
+        },
+        {
+            "Document": "How to create an Open Interactions timeline report",
+            "File": "08. How to create an Open Interactions timeline report.json",
+            "Description": "Steps to How to create an Open Interactions timeline report.",
+            "Questions Answered": [
+                "What steps do I need to follow to create an Open Interactions timeline report?",
+                "How do I select specific residents, interactions, or carers when creating the report?",
+                "Which report format should I choose to best view the number of open interactions versus detailed information?"
+            ]
+        },
+        {
+            "Document": "How to create a timeline report to view food and fluid intake (1)",
+            "File": "14. How to create a timeline report to view food and fluid intake (1).json",
+            "Description": "14. How to create a timeline report to view food and fluid intake Click on the Administration ‘cog’ in the vertical menu on the left-hand side. This will open the Administration Menu, click on ‘Rep...",
+            "Questions Answered": [
+                "How do I select the specific interactions related to food and fluid intake when creating the timeline report?",
+                "What steps do I follow to choose the resident or residents for the timeline report?",
+                "Which report format is recommended for downloading the food and fluid intake timeline report?"
+            ]
+        },
+        {
+            "Document": "How to add an additional support plan",
+            "File": "11. How to add an additional support plan.json",
+            "Description": "Steps to How to add an additional support plan.",
+            "Questions Answered": [
+                "How do I select and add a new Wound Care Support Plan for a specific resident in Nourish?",
+                "What information is required when creating the title and details of the new Wound Care Support Plan?",
+                "How do I set a review date for the additional support plan and finalize its creation?"
+            ]
+        },
+        {
+            "Document": "How to create a Night Check Timeline Report",
+            "File": "10. How to create a Night Check Timeline Report.json",
+            "Description": "Steps to How to create a Night Check Timeline Report.",
+            "Questions Answered": [
+                "How do I select specific residents or include all residents when creating the Night Check Timeline Report?",
+                "What interaction type should I select to ensure the report only includes Night Check data?",
+                "What format options are available for the report, and which format is recommended for the Night Check Timeline Report?"
+            ]
+        },
+        {
+            "Document": "Google Form Raising a Repair work instruction v1.0",
+            "File": "Google Form Raising a Repair work instruction v1.0.json",
+            "Description": "The purpose of this Work Instruction is to show the reader how to submit information through the new “Raise a Repair” Google Form. The report is to be submitted to raise new repair requests only. D...",
+            "Questions Answered": [
+                "What specific information do I need to have ready before submitting a repair request using the Google Form?",
+                "How can I correct mistakes if I realize an error before submitting the form?",
+                "What steps should I take if I have already submitted incorrect information in the repair request form?"
+            ]
+        },
+        {
+            "Document": "How to create a 'Planned interactions' Timeline Report",
+            "File": "05. How to create a 'Planned interactions' Timeline Report.json",
+            "Description": "Steps to How to create a 'Planned interactions' Timeline Report.",
+            "Questions Answered": [
+                "How do I access the Reports menu to start creating a 'Planned Interactions' Timeline Report?",
+                "What settings do I need to select to ensure the report only shows planned and upcoming interactions?",
+                "How do I save and download the completed 'Planned Interactions' Timeline Report?"
+            ]
+        }
+    ]
+}

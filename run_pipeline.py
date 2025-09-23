@@ -320,9 +320,9 @@ def main() -> int:
     ensure_state_file(args.state_file)
     args.lock_path.parent.mkdir(parents=True, exist_ok=True)
 
-    test_vector_store_id = os.getenv("TEST_VECTOR_STORE_ID")
+    test_vector_store_id = os.getenv("TEST_VECTOR_STORE_ID") or os.getenv("VITE_TEST_VECTOR_STORE_ID")
     if not test_vector_store_id:
-        log_event("pipeline.error", error="TEST_VECTOR_STORE_ID not configured")
+        log_event("pipeline.error", error="TEST_VECTOR_STORE_ID / VITE_TEST_VECTOR_STORE_ID not configured")
         return 1
 
     base_env = dict(os.environ)

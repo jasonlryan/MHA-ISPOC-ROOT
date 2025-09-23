@@ -49,7 +49,12 @@ python scripts/combine_indexes.py
 
 
 ### Automation plan (options)
-- **Option A: Power Automate → Azure Automation Runbook (Python)**
+- **Option A: GitHub Actions (`.github/workflows/document-pipeline.yml`)**
+  - Nightly schedule (03:00 UTC) plus manual dispatch.
+  - Executes unit tests then runs `run_pipeline.py --dry-run --skip-ai` using `TEST_VECTOR_STORE_ID` to ensure no production updates.
+  - Requires repository secrets `OPENAI_API_KEY` and `TEST_VECTOR_STORE_ID`.
+  - Uploads the `state/` directory as an artifact for audit/debugging.
+- **Option B: Power Automate → Azure Automation Runbook (Python)**
   - Trigger: file added/updated in SharePoint/OneDrive for `raw policies/` and `raw_guides/`, or a scheduled daily trigger (02:00), or manual button.
   - Steps in Runbook (working directory = repo root):
     1) `python -m pip install -r scripts/requirements.txt`
@@ -63,10 +68,10 @@ python scripts/combine_indexes.py
     9) Vector store upsert (see section below)
   - Secrets: Store `VITE_OPENAI_API_KEY` as an Azure Automation variable/credential and export into the process or write to a temporary `.env` the scripts can read.
 
-- **Option B: Power Automate → Self-hosted runner via on-premises data gateway**
+- **Option C: Power Automate → Self-hosted runner via on-premises data gateway**
   - Execute a shell script on a secure VM or Mac mini that runs the same sequence.
 
-- **Option C: CI (e.g., GitHub Actions or Azure DevOps)**
+- **Option D: CI (e.g., Azure DevOps)**
   - On push or on schedule, run the pipeline. Ensure access to DOCX sources (share or artifact) and secrets.
 
 
@@ -166,12 +171,13 @@ print(f"Upserts: {len(uploads)}")
 
 
 ### Minimal requirements for implementation
-- Python deps for DOCX conversion are already specified: `scripts/requirements.txt` (`python-docx`).
-- Add OpenAI SDK dependency to your automation environment for vector upserts.
-- Ensure `iSPOC/.env` or platform secrets provide `VITE_OPENAI_API_KEY`.
+- Python deps are managed in `scripts/requirements.txt` (pinned `python-docx`, and minimum versions for `openai`, `httpx`, `python-dotenv`, `jsonschema`).
+- `scripts/check_env.py` verifies the presence of OpenAI API keys, vector store IDs, and installed modules; run it locally/CI before invoking the pipeline.
+- Ensure `.env` (root) or `iSPOC/.env` or CI secrets provide `VITE_OPENAI_API_KEY` (or `OPENAI_API_KEY`) and `TEST_VECTOR_STORE_ID`.
 
 
 ### Operational runbook
+- Documentation: see `docs/pipeline_runbook.md` for prerequisites, dry-run guidance, rollback instructions, and troubleshooting tips (including current `test_reconcile_vector_store` gap).
 - **Initial full build**
   1) Place DOCX files into `raw policies/` and `raw_guides/`.
   2) Run the single-command pipeline (above).
