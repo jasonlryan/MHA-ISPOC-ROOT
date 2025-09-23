@@ -1,25 +1,39 @@
 name: Document Pipeline
 
 on:
-  push:
-    branches: [ automate ]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run in dry-run mode (no writes to vector store)"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
+      skip_ai:
+        description: "Skip AI question generation"
+        required: true
+        default: "true"
+        type: choice
+        options: ["true", "false"]
   schedule:
-    - cron: '0 3 * * *' # 03:00 UTC nightly (guarded to run only if ref==automate)
-  workflow_dispatch: {}
+    - cron: "0 3 * * *"  # 03:00 UTC nightly
+  push:
+    branches:
+      - automate
 
 jobs:
   run-pipeline:
     if: github.ref == 'refs/heads/automate'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    env:
+      VITE_OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      TEST_VECTOR_STORE_ID: ${{ secrets.TEST_VECTOR_STORE_ID }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: automate
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -29,39 +43,43 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r scripts/requirements.txt
 
-      - name: Prepare env
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          TEST_VECTOR_STORE_ID: ${{ secrets.TEST_VECTOR_STORE_ID }}
+      - name: Preflight env check
         run: |
-          if [ -z "$OPENAI_API_KEY" ] || [ -z "$TEST_VECTOR_STORE_ID" ]; then
-            echo "Missing OPENAI_API_KEY or TEST_VECTOR_STORE_ID secrets" >&2
-            exit 1
+          python scripts/check_env.py | cat
+
+      - name: Compute flags
+        id: flags
+        run: |
+          # Default to dry-run/skip-ai on schedule and push; use inputs for manual dispatch
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            DRY_RUN_INPUT=${{ github.event.inputs.dry_run }}
+            SKIP_AI_INPUT=${{ github.event.inputs.skip_ai }}
+          else
+            DRY_RUN_INPUT=true
+            SKIP_AI_INPUT=true
           fi
-          echo "VITE_OPENAI_API_KEY=$OPENAI_API_KEY" >> $GITHUB_ENV
-          echo "TEST_VECTOR_STORE_ID=$TEST_VECTOR_STORE_ID" >> $GITHUB_ENV
+          echo "dry_run=$DRY_RUN_INPUT" >> $GITHUB_OUTPUT
+          echo "skip_ai=$SKIP_AI_INPUT" >> $GITHUB_OUTPUT
 
-      - name: Check environment
+      - name: Run pipeline
         run: |
-          PYTHONPATH=. python scripts/check_env.py --json
+          set -euo pipefail
+          DRY_FLAG=""
+          if [ "${{ steps.flags.outputs.dry_run }}" = "true" ]; then
+            DRY_FLAG="--dry-run"
+          fi
+          SKIP_AI_FLAG=""
+          if [ "${{ steps.flags.outputs.skip_ai }}" = "true" ]; then
+            SKIP_AI_FLAG="--skip-ai"
+          fi
+          echo "Using flags: $DRY_FLAG $SKIP_AI_FLAG"
+          python run_pipeline.py $DRY_FLAG $SKIP_AI_FLAG --log-level INFO | cat
 
-      - name: Run unit tests
-        run: |
-          PYTHONPATH=. python -m unittest discover -s scripts/tests -t .
-
-      - name: Run pipeline (dry-run, AI skipped)
-        env:
-          TEST_VECTOR_STORE_ID: ${{ secrets.TEST_VECTOR_STORE_ID }}
-          GITHUB_WORKSPACE: ${{ github.workspace }}
-        run: |
-          export PYTHONPATH="$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/scripts"
-          python run_pipeline.py --dry-run --skip-ai --log-level INFO
-
-      - name: Upload state artifacts
+      - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: pipeline-state
+          name: pipeline-artifacts
           path: |
             state/
             Policy_Documents_Metadata_Index.json

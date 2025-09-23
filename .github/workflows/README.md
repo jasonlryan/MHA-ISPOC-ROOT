@@ -35,6 +35,15 @@ All steps emit structured logs and a final summary event `{"event":"pipeline.com
 
 Workflow file: `.github/workflows/document-pipeline.yml`
 
+### Manual inputs (workflow_dispatch)
+
+- **dry_run**: Defaults to `true`. When `true`, runs with `--dry-run` (no writes to the vector store). Set to `false` only when you explicitly want to apply updates to the test vector store.
+- **skip_ai**: Defaults to `true`. Skips AI question generation during CI/manual runs. You can set to `false` for a full regeneration when needed.
+
+Notes:
+- Scheduled and push-triggered runs keep the safe defaults (dry-run + skip-ai). Only manual dispatch can disable dry-run.
+- The job is additionally guarded to run only on the `automate` branch.
+
 ### Secrets and environment
 
 - **Required repository secrets**:
@@ -95,9 +104,11 @@ python3 run_pipeline.py --log-level INFO
 
 ### How to trigger/re‑run in GitHub
 
-- Navigate to the Actions tab → `Document Pipeline` → `Run workflow`.
-- Pick the `automate` branch and click `Run workflow`.
-- To re‑run a failed job, open the run → `Re-run jobs`.
+- Navigate to Actions → `Document Pipeline` → `Run workflow`.
+- Select branch `automate`.
+- Step 1 (dry-run verification): set `dry_run: true`, `skip_ai: true` → Run. Verify logs: look for `vector.config` with the correct `TEST_VECTOR_STORE_ID` and the final `pipeline.complete` summary counts. Artifacts should include `state/` and index JSONs.
+- Step 2 (apply updates to test store): run again with `dry_run: false` (keep `skip_ai: true` unless you also want to regenerate AI questions). Verify logs show uploads/updates to the test store, and counts update accordingly.
+- To re‑run a failed job: open the run → `Re-run jobs`.
 
 ### Common issues and fixes
 
