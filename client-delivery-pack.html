@@ -97,6 +97,19 @@
         <li>OpenAI API key and vector store IDs (test and live).</li>
       </ul>
       <div class="callout"><strong>Security:</strong> use managed identity for the HTTP action; keep keys in the Container Apps job secrets.</div>
+      
+      <h3>Environment Variables</h3>
+      <p>Set these environment variables in your Azure Container Apps job secrets for testing:</p>
+      <div class="code-block">
+        <button onclick="copyCode(this)">Copy</button>
+        <pre># OpenAI Configuration
+VITE_OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Vector Store ID (Test Environment)
+TEST_VECTOR_STORE_ID=your_test_vector_store_id_here</pre>
+      </div>
+      <p class="muted"><strong>Note:</strong> Replace the placeholder values with your actual keys and IDs. Never commit these values to version control.</p>
     </div>
 
     <div id="workflow" class="card">
@@ -235,12 +248,15 @@ httpx==0.27.0</pre>
     </div>
 
     <div id="next-steps" class="card">
-      <h2>Next steps (use live vector store instead of test)</h2>
-      <ul>
-        <li>Swap <code class="inline">VECTOR_STORE_ID</code> in the Container Apps job from test to live.</li>
+      <h2>Next steps (switch to production)</h2>
+      <ol class="step-list">
+        <li>In your Azure Container Apps job secrets, remove <code class="inline">TEST_VECTOR_STORE_ID</code> and add <code class="inline">VECTOR_STORE_ID</code> with your production vector store ID.</li>
         <li>Turn on the production Power Automate flow.</li>
         <li>Keep notifications enabled for monitoring.</li>
-      </ul>
+      </ol>
+      <div class="callout">
+        <strong>Easy Transition:</strong> The scripts automatically use <code class="inline">TEST_VECTOR_STORE_ID</code> first, then fall back to <code class="inline">VECTOR_STORE_ID</code>. To switch from test to production, simply change which environment variable you set - no code changes needed!
+      </div>
     </div>
   </div>
 </body>
