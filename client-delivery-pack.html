@@ -63,7 +63,6 @@
       <h2>Contents</h2>
       <ol>
         <li><a href="#objective">Objective and Purpose</a></li>
-        <li><a href="#status">Pipeline Status - Ready for Production</a></li>
         <li><a href="#tools">Tools needed</a></li>
         <li><a href="#requirements">Requirements</a></li>
         <li><a href="#workflow">Automated Workflow (triggers, steps and scripts)</a></li>
@@ -78,21 +77,6 @@
       <div class="highlight">Purpose of this project: Automate the flow from SharePoint to iSPOC so staff always have access to the latest policy information without manual updates.</div>
     </div>
 
-    <div id="status" class="card">
-      <h2>✅ Pipeline Status - Ready for Production</h2>
-      <div class="callout">
-        <strong>All systems operational:</strong> The automation pipeline has been successfully tested and is ready for client deployment. All critical issues have been resolved.
-      </div>
-      <ul>
-        <li><strong>✅ Document Processing:</strong> DOCX to JSON conversion working correctly</li>
-        <li><strong>✅ Index Generation:</strong> Policy and guide indexes building successfully</li>
-        <li><strong>✅ AI Question Generation:</strong> OpenAI integration functioning properly</li>
-        <li><strong>✅ Vector Store Updates:</strong> Document upserts to vector store working</li>
-        <li><strong>✅ Validation:</strong> All output files passing schema validation</li>
-        <li><strong>✅ Dependencies:</strong> All library versions pinned for stability</li>
-      </ul>
-      <p class="muted">Last tested: September 23, 2024 - Full end-to-end pipeline execution successful</p>
-    </div>
 
     <div id="tools" class="card">
       <h2>Tools needed</h2>
@@ -113,16 +97,6 @@
         <li>OpenAI API key and vector store IDs (test and live).</li>
       </ul>
       <div class="callout"><strong>Security:</strong> use managed identity for the HTTP action; keep keys in the Container Apps job secrets.</div>
-      
-      <h3>Technical Notes</h3>
-      <div class="highlight">
-        <strong>✅ Dependencies Fixed:</strong> All library versions have been pinned for stability:
-        <ul style="margin: 8px 0 0 0;">
-          <li><code class="inline">openai==1.44.0</code> - Fixed vector store API compatibility</li>
-          <li><code class="inline">httpx==0.27.0</code> - Fixed OpenAI client initialization</li>
-          <li><code class="inline">python-docx==0.8.11</code> - Document processing</li>
-        </ul>
-      </div>
     </div>
 
     <div id="workflow" class="card">
@@ -229,6 +203,18 @@
         <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/reconcile_vector_store.py" download>reconcile_vector_store.py</a>
       </div>
 
+      <h3>Dependencies</h3>
+      <p>The pipeline requires the following Python packages. Create a <code class="inline">requirements.txt</code> file with these exact versions:</p>
+      <div class="code-block">
+        <button onclick="copyCode(this)">Copy</button>
+        <pre>python-docx==0.8.11
+openai==1.44.0
+python-dotenv>=1.0.1
+jsonschema>=4.21.1
+httpx==0.27.0</pre>
+      </div>
+      <p class="muted">Install with: <code class="inline">pip install -r requirements.txt</code></p>
+
       <h3>Power Automate HTTP call</h3>
       <ul>
         <li>Method: <strong>POST</strong></li>
@@ -239,16 +225,13 @@
 
     <div id="testing" class="card">
       <h2>Testing</h2>
-      <div class="callout">
-        <strong>✅ Pipeline Verified:</strong> The complete automation pipeline has been successfully tested end-to-end. All components are functioning correctly.
-      </div>
       <ol class="step-list">
         <li>Upload the provided sample policy DOCX to the watched SharePoint folder.</li>
         <li>Confirm the Power Automate run succeeds and the Azure job starts.</li>
         <li>Check the vector store for the new/updated file metadata.</li>
         <li>Verify that iSPOC can query the updated documents immediately.</li>
       </ol>
-      <p class="muted"><strong>Note:</strong> The pipeline has been tested with 81 policy documents and 28 guide documents. All processing steps completed successfully, including document conversion, index generation, AI question generation, and vector store updates.</p>
+      <p class="muted"><strong>Note:</strong> The pipeline has been tested locally with 81 policy documents and 28 guide documents.</p>
     </div>
 
     <div id="next-steps" class="card">
