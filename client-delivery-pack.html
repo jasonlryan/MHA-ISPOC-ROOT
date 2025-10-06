@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Client Delivery Pack — SharePoint to iSPOC</title>
+<title>Client Delivery Pack — SharePoint to iSPoC</title>
 <style>
   :root { color-scheme: light only; }
   body { font-family: -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #1b1f23; background: #fafafa; }
   .container { max-width: 1024px; margin: 0 auto; padding: 36px 24px 72px; }
-  h1, h2, h3, h4 { margin: 18px 0 10px; line-height: 1.25; }
+  h1, h2, h3, h4 { margin: 18px 0 10px; line-height: 1.25; color: #000000; }
   p { line-height: 1.6; margin: 0 0 12px; }
   ul, ol { margin: 0 0 16px; padding-left: 22px; }
   .muted { color: #6b7280; font-size: 14px; }
@@ -57,7 +57,7 @@
 </head>
 <body>
   <div class="container">
-    <h1>iSPOC: Document Processing & Automation Pipeline</h1>
+    <h1>iSPoC: Document Processing & Automation Pipeline</h1>
 
     <div class="card toc">
       <h2>Contents</h2>
@@ -73,8 +73,8 @@
 
     <div id="objective" class="card">
       <h2>Objective and Purpose</h2>
-      <p class="tagline">Enable staff to get instant, accurate answers from current policies and guides in iSPOC.</p>
-      <div class="highlight">Purpose of this project: Automate the flow from SharePoint to iSPOC so staff always have access to the latest policy information without manual updates.</div>
+      <p class="tagline">Enable staff to get instant, accurate answers from current policies and guides in iSPoC.</p>
+      <div class="highlight">Purpose of this project: Automate the flow from SharePoint to iSPoC so staff always have access to the latest policy information without manual updates.</div>
     </div>
 
 
@@ -84,7 +84,7 @@
         <div class="mini-card"><h4>SharePoint</h4><p>One folder to watch (e.g. <code class="inline">/Policies/Live</code>).</p></div>
         <div class="mini-card"><h4>Power Automate</h4><p>Monitors SharePoint and starts the Azure job.</p></div>
         <div class="mini-card"><h4>Azure Container Apps</h4><p>Runs the processing job.</p></div>
-        <div class="mini-card"><h4>OpenAI (vector store)</h4><p>Updates the vector store used by iSPOC.</p></div>
+        <div class="mini-card"><h4>OpenAI (vector store)</h4><p>Updates the vector store used by iSPoC.</p></div>
       </div>
     </div>
 
@@ -116,7 +116,7 @@ TEST_VECTOR_STORE_ID=your_test_vector_store_id_here</pre>
       <h2>Automated Workflow (triggers, steps and scripts)</h2>
       <p class="muted">Follow the diagram, then use the buttons to download scripts.</p>
 
-      <svg class="flow" viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" aria-label="SharePoint to iSPOC flow">
+      <svg class="flow" viewBox="0 0 960 560" xmlns="http://www.w3.org/2000/svg" aria-label="SharePoint to iSPoC flow">
         <defs>
           <linearGradient id="boxgrad" x1="0" x2="0" y1="0" y2="1">
             <stop offset="0%" stop-color="#ffffff" />
@@ -156,7 +156,7 @@ TEST_VECTOR_STORE_ID=your_test_vector_store_id_here</pre>
         </text>
 
         <rect class="box" x="260" y="440" width="440" height="70" />
-        <text class="label" x="480" y="472" text-anchor="middle">iSPOC Tool</text>
+        <text class="label" x="480" y="472" text-anchor="middle">iSPoC Tool</text>
         <text class="mutelabel" x="480" y="490" text-anchor="middle">Uses vector store</text>
 
         <!-- Vertical arrows between boxes -->
@@ -186,7 +186,7 @@ TEST_VECTOR_STORE_ID=your_test_vector_store_id_here</pre>
             <li><code class="inline">scripts/reconcile_vector_store.py</code> — reconcile deleted/changed files</li>
           </ol>
         </li>
-        <li>iSPOC reflects updates automatically because it reads from the vector store at query time.</li>
+        <li>iSPoC reflects updates automatically because it reads from the vector store at query time.</li>
       </ol>
 
       <div class="callout">
@@ -194,26 +194,11 @@ TEST_VECTOR_STORE_ID=your_test_vector_store_id_here</pre>
       </div>
 
       <div class="highlight">
-        <strong>Download options:</strong> Either use the full ZIP (recommended) or pick individual scripts below.
+        <strong>Download:</strong> Use the full ZIP to get all pipeline scripts and dependencies.
         <div class="download-grid" style="margin-top:12px;">
-          <a class="btn btn-primary" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/client-pipeline.zip" download>Download full pipeline (ZIP)</a>
+          <a class="btn btn-primary" href="/client-pipeline.zip" download>Download full pipeline (ZIP)</a>
         </div>
         <p class="muted" style="margin-top:10px;">The ZIP contains <code class="inline">run_pipeline.py</code> and the entire <code class="inline">scripts/</code> folder. <code class="inline">run_pipeline.py</code> is the orchestrator and requires the scripts to be present.</p>
-      </div>
-
-      <h3>Download scripts</h3>
-      <div class="download-grid">
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/run_pipeline.py" download>run_pipeline.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/convert_to_json.py" download>convert_to_json.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/convert_guides_to_json.py" download>convert_guides_to_json.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/build_policy_index.py" download>build_policy_index.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/build_guide_index.py" download>build_guide_index.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/validate_outputs.py" download>validate_outputs.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/generate_ai_questions.py" download>generate_ai_questions.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/generate_guide_ai_questions.py" download>generate_guide_ai_questions.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/combine_indexes.py" download>combine_indexes.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/vector_store_upsert.py" download>vector_store_upsert.py</a>
-        <a class="btn" href="/Users/rachelstubbs/Documents/MHA-ISPOC-ROOT/scripts/reconcile_vector_store.py" download>reconcile_vector_store.py</a>
       </div>
 
       <h3>Dependencies</h3>
@@ -242,7 +227,7 @@ httpx==0.27.0</pre>
         <li>Upload the provided sample policy DOCX to the watched SharePoint folder.</li>
         <li>Confirm the Power Automate run succeeds and the Azure job starts.</li>
         <li>Check the vector store for the new/updated file metadata.</li>
-        <li>Verify that iSPOC can query the updated documents immediately.</li>
+        <li>Verify that iSPoC can query the updated documents immediately.</li>
       </ol>
       <p class="muted"><strong>Note:</strong> The pipeline has been tested locally with 81 policy documents and 28 guide documents.</p>
     </div>
