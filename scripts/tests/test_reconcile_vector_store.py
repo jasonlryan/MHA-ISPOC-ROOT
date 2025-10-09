@@ -66,6 +66,19 @@ class ReconcilePlanningTests(unittest.TestCase):
 
         self.assertEqual(plan.state_only_removals, [])
 
+    def test_reconcile_does_not_delete_combined_index(self) -> None:
+        # Simulate state containing the combined index entry and ensure that
+        # when allowed files exclude it, the whitelist logic should spare it
+        index_filename = "MHA_Documents_Metadata_Index.json"
+        self.state.upsert(index_filename, file_id="file-index", content_hash="hash-index")
+        self.state.save()
+
+        # The plan function needs allowed files; ensure index filename is included to preserve
+        combined_files = [index_filename]
+        plan = plan_reconciliation([], combined_files, self.state)
+        # No deletions should be scheduled for the index
+        self.assertFalse(any(d.external_id == index_filename for d in plan.deletions))
+
 
 if __name__ == "__main__":
     unittest.main()

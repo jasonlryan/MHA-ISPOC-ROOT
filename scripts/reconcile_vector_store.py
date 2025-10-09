@@ -29,7 +29,22 @@ except ImportError:  # pragma: no cover
 
 import httpx
 
-from scripts.utils.state import VectorState, ensure_state_file
+try:
+    from scripts.utils.state import VectorState, ensure_state_file  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    try:
+        from utils.state import VectorState, ensure_state_file  # type: ignore
+    except ModuleNotFoundError:
+        # Final fallback: import by file path to survive path quirks
+        import importlib.util as _importlib_util
+        _ROOT = Path(__file__).resolve().parents[1]
+        _state_path = _ROOT / "scripts" / "utils" / "state.py"
+        _spec = _importlib_util.spec_from_file_location("state_local", os.fspath(_state_path))
+        if _spec is None or _spec.loader is None:
+            raise
+        _mod = _spec.loader.load_module()  # type: ignore[attr-defined]
+        VectorState = getattr(_mod, "VectorState")  # type: ignore
+        ensure_state_file = getattr(_mod, "ensure_state_file")  # type: ignore
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_COMBINED_INDEX = ROOT / "MHA_Documents_Metadata_Index.json"
@@ -220,6 +235,8 @@ def main() -> int:
 
     index_docs = load_combined_index(args.combined_index)
     allowed_external_ids = {doc.get("File") for doc in index_docs if doc.get("File")}
+    # Always allow the combined index file itself
+    allowed_external_ids.add(args.combined_index.name)
 
     # Determine deletions from local state first (authoritative)
     stale_external_ids = [eid for eid in state.docs.keys() if eid not in allowed_external_ids]

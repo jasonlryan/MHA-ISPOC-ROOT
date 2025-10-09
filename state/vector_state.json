@@ -820,6 +820,14 @@
       "sourcePath": "VECTOR_JSON/MHAC03 MHA Communities Premises, Facilities and Equipment Policy.json",
       "title": "MHA Communities Premises, Facilities and Equipment Policy"
     },
+    "MHA_Documents_Metadata_Index.json": {
+      "contentHash": "33a6b309bfdd6b2bc13bbd828f28462b521aa7214aa52aeff4be9e2683d4f7ae",
+      "documentType": "Index",
+      "fileId": "file-Ts9vQCDtijbk55E4P8Cz3B",
+      "lastSyncedAt": "2025-10-09T10:31:21Z",
+      "sourcePath": "MHA_Documents_Metadata_Index.json",
+      "title": "MHA Documents Combined Index"
+    },
     "Med 221 Psychotropic Medication (2).json": {
       "contentHash": "fa3a17d8c73ebb4d3f0a6688f8eeb220ad731aeb77caebd9d3603284fdcb3bf8",
       "documentType": "Policy",

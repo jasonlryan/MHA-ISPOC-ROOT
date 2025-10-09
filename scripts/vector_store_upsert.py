@@ -193,6 +193,27 @@ def load_combined_index(path: Path) -> List[Dict[str, Any]]:
     return documents
 
 
+def load_combined_index_payload(path: Path) -> Dict[str, Any]:
+    """Load the full combined index payload from disk."""
+    with path.open("r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+
+def normalize_combined_index_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a copy of the combined index payload with documents sorted by filename.
+
+    Sorting ensures reordering does not trigger unnecessary uploads.
+    """
+    documents = payload.get("MHA Documents")
+    if not isinstance(documents, list):
+        raise ValueError("Combined index payload is missing 'MHA Documents' array")
+    # Create a shallow copy to avoid mutating the original structure
+    normalized: Dict[str, Any] = dict(payload)
+    normalized_docs = sorted(documents, key=lambda d: (d or {}).get("File") or "")
+    normalized["MHA Documents"] = normalized_docs
+    return normalized
+
+
 def resolve_source_path(document_type: str, file_name: str) -> Path:
     directory = POLICY_DIR if document_type.lower() == "policy" else GUIDE_DIR
     return directory / file_name
@@ -225,6 +246,30 @@ def build_work_items(documents: Iterable[Dict[str, Any]], state: VectorState) ->
             )
         )
     return items
+
+
+def build_index_work_item(combined_index_path: Path, state: VectorState) -> DocumentWorkItem:
+    """Construct a DocumentWorkItem for the combined metadata index file.
+
+    Uses a normalized view of the payload for hashing to avoid churn from order-only changes.
+    """
+    payload = load_combined_index_payload(combined_index_path)
+    normalized = normalize_combined_index_payload(payload)
+    content_hash = compute_content_hash_from_data(normalized)
+    external_id = combined_index_path.name
+    state_record = state.get(external_id)
+    # Minimal index_record to support title resolution
+    index_record = {"Document": "MHA Documents Combined Index", "Document Type": "Index"}
+    # The upsert upload uses the on-disk file (original order); hashing uses normalized payload
+    return DocumentWorkItem(
+        external_id=external_id,
+        source_path=combined_index_path,
+        document_type="Index",
+        index_record=index_record,
+        json_payload=payload,
+        content_hash=content_hash,
+        state_record=state_record,
+    )
 
 
 def determine_actions(items: Iterable[DocumentWorkItem]) -> Dict[str, List[DocumentWorkItem]]:
@@ -262,6 +307,12 @@ def main() -> int:
 
     documents = load_combined_index(args.combined_index)
     items = build_work_items(documents, state)
+    # Prepend combined index as its own managed work item
+    try:
+        index_item = build_index_work_item(args.combined_index, state)
+        items.insert(0, index_item)
+    except Exception as exc:
+        log_event("planning.index.error", error=str(exc), combinedIndex=str(args.combined_index))
     actions = determine_actions(items)
 
     log_event(
